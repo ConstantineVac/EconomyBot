@@ -22,7 +22,7 @@ module.exports = {
     async execute(interaction) {
         try {
             // Retrieve user information from the database
-            const user = await getDatabase().collection('users').findOne({ _id: interaction.user.id });
+            let user = await getDatabase().collection('users').findOne({ _id: interaction.user.id });
 
             // Check if the user exists
             if (!user) {
@@ -46,34 +46,37 @@ module.exports = {
                 return interaction.reply({ content: 'Insufficient quantity to store.', ephemeral: true });
             }
 
-            // Move items to secondary inventory
-            for (let i = 0; i < quantity; i++) {
-
-                // Find the index of the item in the secondary inventory, excluding null entries
-                const secondaryInventoryItemIndex = user.secondaryInventory.findIndex(item => item && item.id === itemId);
-
-                // If the item is already in the secondary inventory, increase the quantity
-                if (secondaryInventoryItemIndex !== -1) {
-                    user.secondaryInventory[secondaryInventoryItemIndex].quantity += 1;
-                } else {
-                    // If the item is not in the secondary inventory, add it
-                    user.secondaryInventory.push({ name: itemName, quantity: 1 });
-                }
-
-                // Remove the item from the main inventory
-                const inventoryItemIndex = user.inventory.findIndex(item => item.name === itemName);
-                user.inventory.splice(inventoryItemIndex, 1);
-            }
-
             // Filter out null entries in the main inventory
             user.inventory = user.inventory.filter(item => item !== null);
 
             // Filter out null entries in the secondary inventory
             user.secondaryInventory = user.secondaryInventory.filter(item => item !== null);
 
-            // Check if the secondary inventory exceeds the limit
-            if (user.secondaryInventory.length > 300) {
-                return interaction.reply('Your secondary inventory is full! Please remove or move some items.');
+            // Check if the user has enough space in the secondary inventory
+            if (user.secondaryInventory.length + quantity <= 300) {
+                // Move the specified quantity of items to the secondary inventory
+                for (let i = 0; i < quantity; i++) {
+                    // Find the index of the item in the main inventory
+                    const inventoryItemIndex = user.inventory.findIndex(item => item && item.name === itemName);
+
+                    // Check if the item exists in the main inventory
+                    if (inventoryItemIndex !== -1) {
+                        const inventoryItem = user.inventory[inventoryItemIndex];
+
+                        // Move the item to the secondary inventory
+                        user.secondaryInventory.push({ name: inventoryItem.name, id: inventoryItem.id });
+
+                        // Remove the item from the main inventory
+                        user.inventory.splice(inventoryItemIndex, 1);
+                    } else {
+                        // If the item is not found in the main inventory, break the loop
+                        break;
+                    }
+                }
+
+                interaction.reply(`Successfully stored ${quantity} x ${itemName} in your secondary inventory.`);
+            } else {
+                interaction.reply('Your secondary inventory is full! Please remove some items before storing more.');
             }
 
             // Update the user's entry in the database
@@ -81,8 +84,6 @@ module.exports = {
                 { _id: interaction.user.id },
                 { $set: user }
             );
-
-            return interaction.reply(`Successfully stored ${quantity} x ${itemName} in your secondary inventory.`);
         } catch (error) {
             console.error(error);
             return interaction.reply({ content: 'There was an error processing your request.', ephemeral: true });

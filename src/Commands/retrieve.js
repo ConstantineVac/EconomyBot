@@ -9,7 +9,7 @@ module.exports = {
         {
             name: 'item',
             description: 'Item to retrieve',
-            type: 4, // STRING type
+            type: 3, // STRING type
             required: true,
         },
         {
@@ -21,56 +21,72 @@ module.exports = {
     ],
     async execute(interaction) {
         try {
-            // Extract options from the interaction
-            const itemName = interaction.options.getString('item');
-            const quantity = interaction.options.getInteger('quantity');
-
-            // Check if the quantity is valid
-            if (!quantity || quantity <= 0) {
-                return interaction.reply({ content: 'Please provide a valid quantity.', ephemeral: true });
-            }
-
             // Retrieve user information from the database
-            const user = await getDatabase().collection('users').findOne({ _id: interaction.user.id });
+            let user = await getDatabase().collection('users').findOne({ _id: interaction.user.id });
 
             // Check if the user exists
             if (!user) {
                 return interaction.reply({ content: 'User not found.', ephemeral: true });
             }
 
-            // Log the user's inventories for debugging
-            console.log('Main Inventory:', user.inventory);
-            console.log('Secondary Inventory:', user.secondaryInventory);
-
-            // Check if the user has the item in their secondary inventory
-            const secondaryInventoryItem = user.secondaryInventory.find(item => item.name === itemName);
-
-            if (!secondaryInventoryItem || secondaryInventoryItem.quantity < quantity) {
-                return interaction.reply({ content: 'You do not have enough of that item in your secondary inventory.', ephemeral: true });
+            // Initialize secondaryInventory if it doesn't exist
+            if (!user.secondaryInventory) {
+                user.secondaryInventory = [];
             }
 
-            // Calculate the total quantity of the item in the main inventory
-            const mainInventoryItem = user.inventory.find(item => item.name === itemName);
-            const totalQuantity = (mainInventoryItem ? mainInventoryItem.quantity : 0) + quantity;
+            // Get the item to retrieve
+            const itemName = interaction.options.getString('item');
+            const quantity = interaction.options.getInteger('quantity') || 1;
 
-            // Check if the main inventory has enough space
-            if (totalQuantity > 200) {
-                return interaction.reply({ content: 'Your main inventory is full. Cannot retrieve more of that item.', ephemeral: true });
+            // Find the items in the user's secondary inventory, excluding null entries
+            const itemsToRetrieve = user.secondaryInventory.filter(item => item && item.name === itemName);
+
+            // Check if the user has enough quantity to retrieve
+            if (itemsToRetrieve.length < quantity) {
+                return interaction.reply({ content: 'Insufficient quantity to retrieve.', ephemeral: true });
             }
 
-            // Update user's main and secondary inventories in the database
+            // Filter out null entries in the main inventory
+            user.inventory = user.inventory.filter(item => item !== null);
+
+            // Filter out null entries in the secondary inventory
+            user.secondaryInventory = user.secondaryInventory.filter(item => item !== null);
+
+            // Check if the user has enough space in the main inventory
+            if (user.inventory.length + quantity <= 200) {
+                // Retrieve the specified quantity of items from the secondary inventory
+                for (let i = 0; i < quantity; i++) {
+                    // Find the index of the item in the secondary inventory
+                    const secondaryInventoryItemIndex = user.secondaryInventory.findIndex(item => item && item.name === itemName);
+
+                    // Check if the item exists in the secondary inventory
+                    if (secondaryInventoryItemIndex !== -1) {
+                        const secondaryInventoryItem = user.secondaryInventory[secondaryInventoryItemIndex];
+
+                        // Move the item to the main inventory
+                        user.inventory.push({ name: secondaryInventoryItem.name, id: secondaryInventoryItem.id });
+
+                        // Remove the item from the secondary inventory
+                        user.secondaryInventory.splice(secondaryInventoryItemIndex, 1);
+                    } else {
+                        // If the item is not found in the secondary inventory, break the loop
+                        break;
+                    }
+                }
+
+                interaction.reply(`Successfully retrieved ${quantity} x ${itemName} to your main inventory.`);
+            } else {
+                interaction.reply('Your main inventory is full! Please remove some items before retrieving more.');
+            }
+
+            // Update the user's entry in the database
             await getDatabase().collection('users').updateOne(
                 { _id: interaction.user.id },
-                {
-                    $pull: { secondaryInventory: { name: itemName } }, // Remove the item from the secondary inventory
-                    $push: { inventory: { id: secondaryInventoryItem.id, name: itemName} }, // Add the item to the main inventory
-                }
+                { $set: user }
             );
-
-            interaction.reply(`You retrieved ${quantity} ${itemName}(s) from your secondary inventory.`);
         } catch (error) {
             console.error(error);
-            interaction.reply({ content: 'There was an error processing your request.', ephemeral: true });
+            return interaction.reply({ content: 'There was an error processing your request.', ephemeral: true });
         }
     },
 };
