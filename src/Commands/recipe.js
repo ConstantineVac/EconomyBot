@@ -30,7 +30,8 @@ module.exports = {
 
             // Create an embed to display the available recipes for the current page
             const embed = new EmbedBuilder()
-                .setTitle('Recipes')
+                .setTitle(':receipt: Recipes')
+                .setColor('DarkGold')
                 .setDescription(`Available recipes (Page ${pageNumber}/${totalPages})`);
 
             // Add each recipe and its ingredients to the embed
@@ -45,7 +46,7 @@ module.exports = {
 
                 // Add information to the embed
                 embed.addFields({
-                    name: `${recipeName} - ${ingredients}`,
+                    name: `${recipe.emoji} ${recipeName} - ${ingredients}`,
                     value: `Result: ${recipe.output.amount} ${recipe.output.item}`,
                 });
             }
@@ -54,12 +55,12 @@ module.exports = {
             const previousButton = new ButtonBuilder()
                 .setCustomId('previousPage')
                 .setLabel('Previous Page')
-                .setStyle(1);
+                .setStyle(4);
 
             const nextButton = new ButtonBuilder()
                 .setCustomId('nextPage')
                 .setLabel('Next Page')
-                .setStyle(1);
+                .setStyle(3);
 
             // Create an action row for the buttons
             const actionRow = new ActionRowBuilder().addComponents(previousButton, nextButton);

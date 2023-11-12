@@ -3,15 +3,15 @@ const { getDatabase } = require('../database');
 
 module.exports = {
     // The name of the command
-    name: 'deposit',
+    name: 'withdraw',
     // A description of the command
-    description: 'Deposit coins to your bank',
+    description: 'Withdraw coins from your bank',
     // The function to execute when the command is called
     // The options of the command
     options: [{
         name: 'amount',
         type: 4, // The type of the option
-        description: 'The amount of coins to deposit',
+        description: 'The amount of coins to withdraw',
         required: true, // Whether the option is required or optional
     }],
     async execute(interaction) {
@@ -42,26 +42,27 @@ module.exports = {
             }
 
             // Get the amount to deposit from the user's input, defaulting to 0 if not provided
-            const amountToDeposit = interaction.options.getInteger('amount') || 0;
+            const amountToWithdraw = interaction.options.getInteger('amount') || 0;
 
-            // Check if the user has enough cash to deposit
-            if (user.cash >= amountToDeposit && amountToDeposit > 0) {
-                // Move coins from cash to the bank
+            // Check if the user has enough coins in the bank to withdraw
+            if (user.bank >= amountToWithdraw && amountToWithdraw > 0) {
+                // Move coins from the bank to cash
                 await getDatabase().collection('users').updateOne(
                     { _id: userId },
-                    { $inc: { cash: -amountToDeposit, bank: amountToDeposit } }
+                    { $inc: { bank: -amountToWithdraw, cash: amountToWithdraw } }
                 );
 
-                // Send a reply confirming the deposit
-                interaction.reply(`Successfully deposited ${amountToDeposit} coins to your bank.`);
+                // Send a reply confirming the withdrawal
+                interaction.reply(`Successfully withdrew ${amountToWithdraw} coins from your bank.`);
             } else {
                 // Send a reply if the user has insufficient funds or entered an invalid amount
-                interaction.reply('Invalid amount or insufficient funds in your cash to deposit.');
+                interaction.reply('Invalid amount or insufficient funds in your bank for withdrawal.');
             }
+
         } catch (error) {
             // If there was an error, log it to the console and send a reply
             console.error(error);
-            interaction.reply({ content: 'There was an error depositing coins.', ephemeral: true });
+            interaction.reply({ content: 'There was an error withdrawing coins.', ephemeral: true });
         }
     },
 };

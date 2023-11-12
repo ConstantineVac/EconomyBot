@@ -1,4 +1,4 @@
-// inv.js
+// chest.js
 
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder } = require('discord.js');
 const { getDatabase } = require('../database');
@@ -6,8 +6,8 @@ const { getDatabase } = require('../database');
 const ITEMS_PER_PAGE = 5;
 
 module.exports = {
-    name: 'inv',
-    description: 'View your inventory',
+    name: 'chest',
+    description: 'View your secondary inventory',
     async execute(interaction) {
         try {
             // Initialize itemCounts for each execution
@@ -22,11 +22,11 @@ module.exports = {
             }
 
             // Filter out null entries in the inventory
-            const validInventory = user.inventory.filter(item => item !== null && item.name);
+            const validInventory = user.secondaryInventory.filter(item => item !== null && item.name);
 
             // Check if the user has items in the inventory
             if (!validInventory || validInventory.length === 0) {
-                return interaction.reply('Your inventory is empty.');
+                return interaction.reply('Your chest inventory is empty.');
             }
 
             // Count the occurrences of each item in the inventory
@@ -47,7 +47,7 @@ module.exports = {
 
             // Create an embed to display the user's inventory for the current page
             const embed = new EmbedBuilder()
-                .setTitle('🎒Inventory')
+                .setTitle('🧰 Chest')
                 .setColor('Green')
                 .setDescription(`Items in your inventory (Page ${pageNumber}/${totalPages})`);
 
@@ -79,7 +79,7 @@ module.exports = {
             interaction.reply({ embeds: [embed], components: [actionRow] });
         } catch (error) {
             console.error(error);
-            interaction.reply({ content: 'There was an error fetching your inventory.', ephemeral: true });
+            interaction.reply({ content: 'There was an error fetching your secondary inventory.', ephemeral: true });
         }
     },
 };

@@ -1,32 +1,49 @@
-// Import the necessary module
+const { EmbedBuilder } = require('discord.js');
 const { getDatabase } = require('../database');
 
 module.exports = {
-    // The name of the command
     name: 'balance',
-    // A description of the command
     description: 'Check your balance',
-    // The function to execute when the command is called
     async execute(interaction) {
-        // Get the ID of the user who invoked the command
         const userId = interaction.user.id;
 
         try {
-            // Try to find the user's document in the database
-            const user = await getDatabase().collection('users').findOne({ _id: userId });
+            var user = await getDatabase().collection('users').findOne({ _id: userId });
 
-            // If the user doesn't exist in the database, send a reply and stop execution
+            // If the user doesn't exist, initialize a new entry
             if (!user) {
-                return interaction.reply('You do not have a balance yet. Use the `/deposit` command to get started.');
+                const newUser = {
+                    _id: userId,
+                    username: interaction.user.username,
+                    cash: 0,
+                    bank: 0, 
+                    stash: 0,
+                    inventory: Array(200).fill(null),
+                    secondaryInventory: Array(300).fill(null),
+                    // Add other fields as needed
+                };
+
+                await getDatabase().collection('users').insertOne(newUser);
+
+                // Retrieve the newly inserted user
+                user = newUser;
             }
 
-            // Send a reply with the user's balance
-            interaction.reply(`Your balance is ${user.balance} coins.`);
+            // Create an embed to display the user's balance
+            const embed = new EmbedBuilder()
+                .setTitle('Your Account:')
+                .setColor('Green')
+                .addFields(
+                    { name: '💵 Cash', value: user.cash.toString() || '0', inline: true},
+                    { name: '💳 Bank', value: user.bank.toString() || '0', inline: true},
+                    { name: '💰 Stash', value: user.stash.toString() || '0', inline: true}
+                );
+
+            // Send the embed as a reply
+            interaction.reply({ embeds: [embed] });
         } catch (error) {
-            // If there was an error, log it to the console and send a reply
             console.error(error);
             interaction.reply({ content: 'There was an error checking your balance.', ephemeral: true });
         }
     },
 };
-

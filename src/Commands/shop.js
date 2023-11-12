@@ -10,27 +10,28 @@ module.exports = {
         try {
             // Retrieve shop items from the database
             const shopItems = await getDatabase().collection('shop').find().toArray();
-
+            //console.log(shopItems);
             if (shopItems.length === 0) {
                 return interaction.reply('The shop is currently empty. Check back later!');
             }
 
             const embed = new EmbedBuilder()
-                .setTitle('Shop')
+                .setTitle('🏪 Shop')
+                .setColor('DarkRed')
                 .setDescription('Available items in the shop');
 
             const buttonsRow = new ActionRowBuilder();
 
             shopItems.forEach(item => {
                 embed.addFields({
-                    name: `**${item.name}** - **${item.price}** coins`,
+                    name: `${item.emoji} **${item.name}** - **${item.price}** coins`,
                     value: `ID: ${item.id}`,
                 });
 
                 const button = new ButtonBuilder()
                     .setCustomId(`${item.id}`)
                     .setLabel(`🛒 ${item.name}`)
-                    .setStyle(1); 
+                    .setStyle(3); 
 
                 buttonsRow.addComponents(button);
             });
