@@ -1,0 +1,34 @@
+# Node.js
+node_modules/
+
+# Environment variables
+.env
+
+# Logs
+logs/
+*.log
+
+# Output of npm
+npm-debug.log
+npm-error.log
+
+# Dependency directories
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# dotenv environment variables file
+.env
+
+# Mac OS
+.DS_Store
+
+# VSCode
+.vscode/
+
+# IDE
+.idea/
+
+# Compiled binary addons
+build/Release
