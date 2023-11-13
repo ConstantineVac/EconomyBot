@@ -3,15 +3,12 @@
 const { getDatabase } = require('../database');
 
 module.exports = async (interaction) => {
-    // Extract action and item id from the button custom id
-    const [action, itemId] = interaction.customId.split('_');
+    // Extract action and new page number from the button custom id
+    const [action, newPage] = interaction.customId.split('_');
 
     if (action === 'previousPage' || action === 'nextPage') {
-        if (action === 'previousPage') {
-            console.log('previous button click')
-        } else {
-            console.log('next button click')
-        }
+        // Call the 'recipe' command with the new page number
+        interaction.client.commands.get('recipe').execute(interaction, parseInt(newPage));
     } else {
         // Extract item id from the button custom id by removing "purchase_"
         const itemId = Number(interaction.customId); // Convert to number
@@ -66,4 +63,3 @@ module.exports = async (interaction) => {
 
     }
 };
-
