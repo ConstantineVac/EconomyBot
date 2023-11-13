@@ -1,7 +1,7 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
-const { connect } = require('./database');  // Import the connect function from the database module
+const { connect, getDatabase } = require('./database');  // Import the connect function from the database module
 const { Client, GatewayIntentBits, Collection } = require('discord.js'); 
 
 const client = new Client({
@@ -19,6 +19,12 @@ client.once('ready', async () => {
     // Connect to the database
     await connect();
 
+    // Fetch the recipes from the database
+    const recipes = await getDatabase().collection('recipes').find().toArray();
+
+    // Map the recipes to the format needed for choices
+    const choicesRecipes = recipes.map(recipe => ({ name: recipe.name, value: recipe.name }));
+
     // Construct the path to the Commands directory
     const commandsDirectory = path.join(__dirname, 'Commands');
 
@@ -28,6 +34,10 @@ client.once('ready', async () => {
 
     for (const file of commandFiles) {
         const command = require(path.join(commandsDirectory, file));
+        // If this is the 'craft' command, modify its options
+        if (command.name === 'craft') {
+            command.options[0].choices = choicesRecipes;
+        } 
         client.commands.set(command.name, command);
     }
 
@@ -39,6 +49,7 @@ client.once('ready', async () => {
     }));
 
     await client.guilds.cache.get(process.env.GUILD_ID).commands.set(commands);
+    console.log('✅ All commands have been registered successfully!');
 });
 
 client.on('interactionCreate', async interaction => {

@@ -64,19 +64,26 @@ module.exports = {
 
             // Create buttons for navigating between pages
             const previousButton = new ButtonBuilder()
-            .setCustomId('previousPage')
+            .setCustomId(`previousPage_${Math.max(1, pageNumber - 1)}`)
             .setLabel('Previous Page')
-            .setStyle(4); // Red
+            .setStyle(4)
+            .setDisabled(pageNumber === 1); // Disable if this is the first page
 
             const nextButton = new ButtonBuilder()
-            .setCustomId('nextPage')
+            .setCustomId(`nextPage_${pageNumber + 1}`)
             .setLabel('Next Page')
-            .setStyle(3); // Green
+            .setStyle(3)
+            .setDisabled(pageNumber === totalPages); // Disable if this is the last page
 
             // Create an action row for the buttons
             const actionRow = new ActionRowBuilder().addComponents(previousButton, nextButton);
 
+            // Check if this is a button interaction and update the message
+            if (interaction.isButton()) {
+            interaction.update({ embeds: [embed], components: [actionRow] });
+            } else {
             interaction.reply({ embeds: [embed], components: [actionRow] });
+            }
         } catch (error) {
             console.error(error);
             interaction.reply({ content: 'There was an error fetching your secondary inventory.', ephemeral: true });
