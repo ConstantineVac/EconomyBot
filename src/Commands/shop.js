@@ -41,7 +41,7 @@ module.exports = {
 
                 embed.addFields({
                     name: `${item.emoji} **${item.name}** - 🪙 **${item.price}** coins`,
-                    value: `ID: ${item.id}`,
+                    value: ` Quantity: 1pcs`
                 });
 
                 const button = new ButtonBuilder()
