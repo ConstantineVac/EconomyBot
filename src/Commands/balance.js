@@ -31,6 +31,8 @@ module.exports = {
                 user = newUser;
             }
 
+            //console.log(user.currentJob.name)
+
             // Create an embed to display the user's balance
             const embed = new EmbedBuilder()
                 .setTitle('Your Account:')
@@ -40,7 +42,7 @@ module.exports = {
                     { name: '💵 Cash', value: user.cash.toString() || '0', inline: true},
                     { name: '💳 Bank', value: user.bank.toString() || '0', inline: true},
                     { name: '💰 Stash', value: user.stash.toString() || '0', inline: true},
-                    { name: '💼 Occupation', value: user.currentjob ? user.currentjob.name.toString() : 'Unemployed', inline: true}, // Check if user.currentjob exists
+                    { name: '💼 Occupation', value: user.currentJob ? user.currentJob.name : 'Unemployed', inline: true}, // Check if user.currentjob exists
                 );
 
             // Send the embed as a reply
