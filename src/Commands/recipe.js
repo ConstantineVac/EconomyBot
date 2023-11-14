@@ -60,13 +60,13 @@ module.exports = {
     
             // Create buttons for navigating between pages
             const previousButton = new ButtonBuilder()
-            .setCustomId(`previousPage_${Math.max(1, pageNumber - 1)}`)
+            .setCustomId(`previousPageRec_${Math.max(1, pageNumber - 1)}`)
             .setLabel('Previous Page')
             .setStyle(4)
             .setDisabled(pageNumber === 1); // Disable if this is the first page
 
             const nextButton = new ButtonBuilder()
-            .setCustomId(`nextPage_${pageNumber + 1}`)
+            .setCustomId(`nextPageRec_${pageNumber + 1}`)
             .setLabel('Next Page')
             .setStyle(3)
             .setDisabled(pageNumber === totalPages); // Disable if this is the last page

@@ -6,9 +6,22 @@ module.exports = async (interaction) => {
     // Extract action and new page number from the button custom id
     const [action, newPage] = interaction.customId.split('_');
 
-    if (action === 'previousPage' || action === 'nextPage') {
+    if (action === 'previousPageRec' || action === 'nextPageRec') {
         // Call the 'recipe' command with the new page number
         interaction.client.commands.get('recipe').execute(interaction, parseInt(newPage));
+
+    } else if (action === 'previousPageInv' || action === 'nextPageInv') {
+        // Call the 'inv' command with the new page number
+        interaction.client.commands.get('inv').execute(interaction, parseInt(newPage));
+
+    } else if (action === 'previousPageChest' || action === 'nextPageChest')       {
+        // Call the 'chest' command with the new page number
+        interaction.client.commands.get('chest').execute(interaction, parseInt(newPage));
+
+    } else if (action === 'previousPageShop' || action === 'nextPageShop') {    
+        // Call the 'chest' command with the new page number
+        interaction.client.commands.get('shop').execute(interaction, parseInt(newPage));
+        
     } else {
         // Extract item id from the button custom id by removing "purchase_"
         const itemId = Number(interaction.customId); // Convert to number
@@ -30,6 +43,7 @@ module.exports = async (interaction) => {
         }
         const userBalance = user.bank;
         const itemPrice = shopItem.price;
+        const itemEmoji = shopItem.emoji;
 
         const userInventory = user.inventory || [];
 
@@ -49,14 +63,14 @@ module.exports = async (interaction) => {
                     $inc: { bank: -itemPrice },
                     $push: {
                         inventory: {
-                            $each: [{ id: itemId, name: shopItem.name }],
+                            $each: [{ id: itemId, name: shopItem.name, emoji: shopItem.emoji }],
                             $position: 0 // Add the new item to the beginning of the array
                         }
                     }
                 }
             );
 
-            interaction.reply(`You have successfully purchased 1 x ${shopItem.name}!`);
+            interaction.reply(`You have successfully purchased 1 x ${shopItem.emoji} ${shopItem.name}!`);
         } else {
             interaction.reply('You do not have enough coins to purchase this item.');
         }

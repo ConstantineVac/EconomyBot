@@ -2,6 +2,8 @@
 
 const { getDatabase } = require('../database');
 
+let itemEmoji = '';
+
 module.exports = {
     name: 'store',
     description: 'Store items in your secondary inventory',
@@ -37,10 +39,10 @@ module.exports = {
             // Get the item to store
             const itemName = interaction.options.getString('item');
             const quantity = interaction.options.getInteger('quantity') || 1;
-
+            
             // Find the items in the user's inventory, excluding null entries
             const itemsToMove = user.inventory.filter(item => item && item.name === itemName);
-
+            
             // Check if the user has enough quantity to store
             if (itemsToMove.length < quantity) {
                 return interaction.reply({ content: 'Insufficient quantity to store.', ephemeral: true });
@@ -62,9 +64,10 @@ module.exports = {
                     // Check if the item exists in the main inventory
                     if (inventoryItemIndex !== -1) {
                         const inventoryItem = user.inventory[inventoryItemIndex];
-
+                        itemEmoji = inventoryItem.emoji;
+                        
                         // Move the item to the secondary inventory
-                        user.secondaryInventory.push({ name: inventoryItem.name, id: inventoryItem.id });
+                        user.secondaryInventory.push({ name: inventoryItem.name, id: inventoryItem.id, emoji: inventoryItem.emoji });
 
                         // Remove the item from the main inventory
                         user.inventory.splice(inventoryItemIndex, 1);
@@ -74,7 +77,7 @@ module.exports = {
                     }
                 }
 
-                interaction.reply(`Successfully stored ${quantity} x ${itemName} in your secondary inventory.`);
+                interaction.reply(`Successfully stored ${quantity} x ${itemEmoji} ${itemName} in your secondary inventory.`);
             } else {
                 interaction.reply('Your secondary inventory is full! Please remove some items before storing more.');
             }

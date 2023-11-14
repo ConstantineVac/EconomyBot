@@ -25,7 +25,7 @@ module.exports = {
             console.log('salary:', salary);
 
             // Calculate the maximum possible earnings based on elapsed time
-            const maxEarnings = Math.min(Math.floor(elapsedTimeMinutes / 10) * salary, 120);
+            const maxEarnings = Math.min(Math.floor(elapsedTimeMinutes / 10) * salary, salary * 12);
 
             console.log('maxEarnings:', maxEarnings);
 
@@ -38,7 +38,7 @@ module.exports = {
             // Update the user in the database
             await getDatabase().collection('users').updateOne({ _id: interaction.user.id }, { $set: { cash: user.cash, currentJob: user.currentJob } });
 
-            interaction.reply(`You have successfully cashed out ${maxEarnings} coins from your job earnings.`);
+            interaction.reply(`You have successfully cashed out 🪙${maxEarnings} coins from your job earnings.`);
         } catch (error) {
             console.error(error);
             return interaction.reply({ content: 'An error occurred while processing your job cashout.', ephemeral: true });

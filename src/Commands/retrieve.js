@@ -2,6 +2,8 @@
 
 const { getDatabase } = require('../database');
 
+let itemEmoji = '';
+
 module.exports = {
     name: 'retrieve',
     description: 'Retrieve items from your secondary inventory',
@@ -62,9 +64,10 @@ module.exports = {
                     // Check if the item exists in the secondary inventory
                     if (secondaryInventoryItemIndex !== -1) {
                         const secondaryInventoryItem = user.secondaryInventory[secondaryInventoryItemIndex];
+                        itemEmoji = secondaryInventoryItem.emoji;
 
                         // Move the item to the main inventory
-                        user.inventory.push({ name: secondaryInventoryItem.name, id: secondaryInventoryItem.id });
+                        user.inventory.push({ name: secondaryInventoryItem.name, id: secondaryInventoryItem.id, emoji: secondaryInventoryItem.emoji });
 
                         // Remove the item from the secondary inventory
                         user.secondaryInventory.splice(secondaryInventoryItemIndex, 1);
@@ -74,7 +77,7 @@ module.exports = {
                     }
                 }
 
-                interaction.reply(`Successfully retrieved ${quantity} x ${itemName} to your main inventory.`);
+                interaction.reply(`Successfully retrieved ${quantity} x ${itemEmoji} ${itemName} to your main inventory.`);
             } else {
                 interaction.reply('Your main inventory is full! Please remove some items before retrieving more.');
             }

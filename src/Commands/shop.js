@@ -1,28 +1,43 @@
-// shop.js
-
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, EmbedBuilder } = require('discord.js');
 const { getDatabase } = require('../database');
+
+const ITEMS_PER_PAGE = 5;
 
 module.exports = {
     name: 'shop',
     description: 'View items available in the shop',
-    async execute(interaction) {
+    async execute(interaction, pageNumber = 1) {
         try {
             // Retrieve shop items from the database
             const shopItems = await getDatabase().collection('shop').find().toArray();
-            //console.log(shopItems);
+
             if (shopItems.length === 0) {
                 return interaction.reply('The shop is currently empty. Check back later!');
             }
 
+            // Calculate the total number of pages
+            const totalPages = Math.ceil(shopItems.length / ITEMS_PER_PAGE);
+
+            // Retrieve the page number from the interaction (default to 1 if not provided)
+            if (interaction.options) {
+                pageNumber = parseInt(interaction.options.getString('page')) || pageNumber;
+            }
+
+            // Calculate the start and end indices for the current page
+            const startIndex = (pageNumber - 1) * ITEMS_PER_PAGE;
+            const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, shopItems.length);
+
             const embed = new EmbedBuilder()
                 .setTitle('🏪 Shop')
                 .setColor('DarkRed')
-                .setDescription('Available items in the shop');
+                .setDescription(`Available items in the shop (Page ${pageNumber}/${totalPages})`);
 
-            const buttonsRow = new ActionRowBuilder();
+            const itemsRow = new ActionRowBuilder();
+            const navigationRow = new ActionRowBuilder();
 
-            shopItems.forEach(item => {
+            for (let i = startIndex; i < endIndex; i++) {
+                const item = shopItems[i];
+
                 embed.addFields({
                     name: `${item.emoji} **${item.name}** - **${item.price}** coins`,
                     value: `ID: ${item.id}`,
@@ -31,12 +46,28 @@ module.exports = {
                 const button = new ButtonBuilder()
                     .setCustomId(`${item.id}`)
                     .setLabel(`🛒 ${item.name}`)
-                    .setStyle(3); 
+                    .setStyle(3);
 
-                buttonsRow.addComponents(button);
-            });
+                itemsRow.addComponents(button);
+            }
 
-            interaction.reply({ embeds: [embed], components: [buttonsRow] });
+            // Create buttons for navigating between pages
+            const previousButton = new ButtonBuilder()
+                .setCustomId(`previousPageShop_${Math.max(1, pageNumber - 1)}`)
+                .setLabel('Previous Page')
+                .setStyle(4)
+                .setDisabled(pageNumber === 1); // Disable if this is the first page
+
+            const nextButton = new ButtonBuilder()
+                .setCustomId(`nextPageShop_${pageNumber + 1}`)
+                .setLabel('Next Page')
+                .setStyle(3)
+                .setDisabled(pageNumber === totalPages); // Disable if this is the last page
+
+            // Add pagination buttons to the row
+            navigationRow.addComponents(previousButton, nextButton);
+
+            interaction.reply({ embeds: [embed], components: [itemsRow, navigationRow] });
         } catch (error) {
             console.error(error);
             interaction.reply({ content: 'There was an error fetching the shop items.', ephemeral: true });

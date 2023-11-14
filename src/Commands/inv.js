@@ -8,7 +8,7 @@ const ITEMS_PER_PAGE = 5;
 module.exports = {
     name: 'inv',
     description: 'View your inventory',
-    async execute(interaction) {
+    async execute(interaction, pageNumber = 1) {
         try {
             // Initialize itemCounts for each execution
             const itemCounts = {};
@@ -37,9 +37,11 @@ module.exports = {
 
             // Calculate the total number of pages
             const totalPages = Math.ceil(Object.keys(itemCounts).length / ITEMS_PER_PAGE);
-
+            
             // Retrieve the page number from the interaction (default to 1 if not provided)
-            const pageNumber = parseInt(interaction.options.getString('page')) || 1;
+            if (interaction.options) {
+                pageNumber = parseInt(interaction.options.getString('page')) || pageNumber;
+            }
 
             // Calculate the start and end indices for the current page
             const startIndex = (pageNumber - 1) * ITEMS_PER_PAGE;
@@ -52,24 +54,33 @@ module.exports = {
                 .setDescription(`Items in your inventory (Page ${pageNumber}/${totalPages})`);
 
             // Add each item and its count to the embed
+            let itemNumber = (pageNumber - 1) * ITEMS_PER_PAGE + 1;
             for (let i = startIndex; i < endIndex; i++) {
                 const itemName = Object.keys(itemCounts)[i];
-                const itemNumber = i + 1;  // Add 1 to the index to start numbering from 1
-                embed.addFields({
-                    name: `${itemNumber}. **${itemName}**`,
-                    value: `Quantity: **${itemCounts[itemName]}**`,
-                });
+                const itemCount = itemCounts[itemName];
+
+                // Retrieve the item from the inventory to get the emoji
+                const item = validInventory.find(item => item.name === itemName);
+
+                // Check if itemName, itemCount, and item are defined
+                if (itemName && itemCount !== undefined && item) {
+                    embed.addFields({
+                        name: `${item.emoji} ${itemNumber}. **${itemName}**`,
+                        value: `Quantity: **${itemCount}**`,
+                    });
+                    itemNumber++;
+                }
             }
 
             // Create buttons for navigating between pages
             const previousButton = new ButtonBuilder()
-            .setCustomId(`previousPage_${Math.max(1, pageNumber - 1)}`)
+            .setCustomId(`previousPageInv_${Math.max(1, pageNumber - 1)}`)
             .setLabel('Previous Page')
             .setStyle(4)
             .setDisabled(pageNumber === 1); // Disable if this is the first page
 
             const nextButton = new ButtonBuilder()
-            .setCustomId(`nextPage_${pageNumber + 1}`)
+            .setCustomId(`nextPageInv_${pageNumber + 1}`)
             .setLabel('Next Page')
             .setStyle(3)
             .setDisabled(pageNumber === totalPages); // Disable if this is the last page
