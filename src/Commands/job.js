@@ -69,7 +69,7 @@ module.exports = {
             // Update the user in the database
             await getDatabase().collection('users').updateOne({ _id: interaction.user.id }, { $set: { currentJob: user.currentJob } });
 
-            interaction.followUp(`You have started working as a ${selectedJob.name}.`);
+            interaction.followUp(`💼 You have started working as a ${selectedJob.name}.`);
         } catch (error) {
             console.error(error);
             interaction.followUp({ content: `An error occurred while processing your job assignment. ${error.message}`, ephemeral: true });

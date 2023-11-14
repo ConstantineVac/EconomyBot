@@ -29,6 +29,7 @@ module.exports = {
 
             const embed = new EmbedBuilder()
                 .setTitle('🏪 Shop')
+                .setThumbnail('https://i.postimg.cc/g2X1Qfkq/shop.png')
                 .setColor('DarkRed')
                 .setDescription(`Available items in the shop (Page ${pageNumber}/${totalPages})`);
 
@@ -39,7 +40,7 @@ module.exports = {
                 const item = shopItems[i];
 
                 embed.addFields({
-                    name: `${item.emoji} **${item.name}** - **${item.price}** coins`,
+                    name: `${item.emoji} **${item.name}** - 🪙 **${item.price}** coins`,
                     value: `ID: ${item.id}`,
                 });
 

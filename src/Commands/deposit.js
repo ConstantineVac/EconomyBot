@@ -53,7 +53,7 @@ module.exports = {
                 );
 
                 // Send a reply confirming the deposit
-                interaction.reply(`Successfully deposited ${amountToDeposit} coins to your bank.`);
+                interaction.reply(`Successfully deposited 🪙 ${amountToDeposit} coins to your bank.`);
             } else {
                 // Send a reply if the user has insufficient funds or entered an invalid amount
                 interaction.reply('Invalid amount or insufficient funds in your cash to deposit.');

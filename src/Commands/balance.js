@@ -36,7 +36,9 @@ module.exports = {
             // Create an embed to display the user's balance
             const embed = new EmbedBuilder()
                 .setTitle('Your Account:')
+                //.setImage(`${interaction.user.displayAvatarURL()}`)
                 .setDescription(`Name: ${user.username}`)
+                .setThumbnail('https://i.postimg.cc/tJsjB71p/account.png')
                 .setColor('Green')
                 .addFields(
                     { name: '💵 Cash', value: user.cash.toString() || '0', inline: true},

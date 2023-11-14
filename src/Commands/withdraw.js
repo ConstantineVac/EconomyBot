@@ -53,7 +53,7 @@ module.exports = {
                 );
 
                 // Send a reply confirming the withdrawal
-                interaction.reply(`Successfully withdrew ${amountToWithdraw} coins from your bank.`);
+                interaction.reply(`Successfully withdrew 🪙 ${amountToWithdraw} coins from your bank.`);
             } else {
                 // Send a reply if the user has insufficient funds or entered an invalid amount
                 interaction.reply('Invalid amount or insufficient funds in your bank for withdrawal.');

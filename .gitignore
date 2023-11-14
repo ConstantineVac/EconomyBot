@@ -18,9 +18,6 @@ pids/
 *.seed
 *.pid.lock
 
-# dotenv environment variables file
-.env
-
 # Mac OS
 .DS_Store
 
@@ -32,3 +29,6 @@ pids/
 
 # Compiled binary addons
 build/Release
+
+# pics
+src/static/

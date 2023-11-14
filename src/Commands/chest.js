@@ -56,6 +56,7 @@ module.exports = {
             // Create an embed to display the user's inventory for the current page
             const embed = new EmbedBuilder()
                 .setTitle('🧰 Chest')
+                .setThumbnail('https://i.postimg.cc/Hkz7GPZn/chest.png')
                 .setColor('Green')
                 .setDescription(`Items in your inventory (Page ${pageNumber}/${totalPages})`);
 
