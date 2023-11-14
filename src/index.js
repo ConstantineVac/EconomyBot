@@ -21,9 +21,12 @@ client.once('ready', async () => {
 
     // Fetch the recipes from the database
     const recipes = await getDatabase().collection('recipes').find().toArray();
+    //const items = await getDatabase().collection('items').find().toArray();
 
     // Map the recipes to the format needed for choices
     const choicesRecipes = recipes.map(recipe => ({ name: recipe.name, value: recipe.name }));
+    //const choicesItems = items.map(item => ({ name: item.name, value: item.name })); CANNOT LOAD MORE THAN 25
+
 
     // Construct the path to the Commands directory
     const commandsDirectory = path.join(__dirname, 'Commands');
@@ -38,6 +41,10 @@ client.once('ready', async () => {
         if (command.name === 'craft') {
             command.options[0].choices = choicesRecipes;
         } 
+        //if (command.name === 'give-item') {
+            // Modify 'give-item' command options
+            //command.options[2].choices = choicesItems;
+        //}
         client.commands.set(command.name, command);
     }
 

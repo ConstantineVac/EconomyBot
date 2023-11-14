@@ -53,8 +53,8 @@ module.exports = {
                     cash: 0,
                     bank: 0, 
                     stash: 0,
-                    inventory: Array.from({ length: 200 }),
-                    secondaryInventory: Array.from({ length: 300 }),
+                    inventory: [ ],
+                    secondaryInventory: [ ],
                     // Add other fields as needed
                 };
 
