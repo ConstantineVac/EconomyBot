@@ -34,7 +34,7 @@ module.exports = {
     // The function to execute when the command is called
     async execute(interaction) {
         // Check if the user has the required role (replace ROLE_ID with the actual role ID)
-        if (!interaction.member.roles.cache.has(process.env.MODERATOR_ROLE)) {
+        if (!interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST) && !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ELENI)) {
             return interaction.reply('You do not have the required role to use this command.');
         }
 

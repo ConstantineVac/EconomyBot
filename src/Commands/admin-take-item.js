@@ -37,7 +37,7 @@ module.exports = {
     async execute(interaction) {
         try {
             // Check if the user has the required role (replace ROLE_ID with the actual role ID)
-            if (!interaction.member.roles.cache.has(process.env.MODERATOR_ROLE)) {
+            if (!interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST) && !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ELENI)) {
                 return interaction.reply('You do not have the required role to use this command.');
             }
 
@@ -90,7 +90,10 @@ module.exports = {
                 { $set: { [inventoryType]: inventoryToUpdate } }
             );
 
-            interaction.reply(`Successfully took ${totalAmount} x ${itemName} from ${targetUser.username}.`);
+            // Get the emoji of the first item in the array (assuming all items have the same emoji)
+            const itemEmoji = itemsToRemove[0].emoji;
+
+            interaction.reply(`Successfully took ${totalAmount} x ${itemEmoji} ${itemName} from ${targetUser.username}.`);
         } catch (error) {
             console.error(error);
             interaction.reply({ content: 'An error occurred while processing the take-item command.', ephemeral: true });
