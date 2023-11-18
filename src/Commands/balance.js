@@ -8,6 +8,8 @@ module.exports = {
         const userId = interaction.user.id;
 
         try {
+            // Load 
+            // Load user
             var user = await getDatabase().collection('users').findOne({ _id: userId });
 
             // If the user doesn't exist, initialize a new entry
@@ -15,9 +17,9 @@ module.exports = {
                 const newUser = {
                     _id: userId,
                     username: interaction.user.username,
-                    cash: 0,
-                    bank: 0,
-                    stash: 0,
+                    cash: 0.0,
+                    bank: 0.0,
+                    stash: 0.0,
                     inventory: [],  // Initialize as an empty array
                     secondaryInventory: [],  // Initialize as an empty array
                     // Add other fields as needed
@@ -32,6 +34,10 @@ module.exports = {
             }
 
             //console.log(user.currentJob.name)
+            
+            // Format the money for better readabillity.
+            const formattedCash = user.cash.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+            const formattedBank = user.bank.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
             // Create an embed to display the user's balance
             const embed = new EmbedBuilder()
@@ -41,8 +47,8 @@ module.exports = {
                 .setThumbnail('https://i.postimg.cc/tJsjB71p/account.png')
                 .setColor('Green')
                 .addFields(
-                    { name: '💵 Cash', value: user.cash.toString() || '0', inline: true},
-                    { name: '💳 Bank', value: user.bank.toString() || '0', inline: true},
+                    { name: '💵 Cash', value: formattedCash || '0', inline: true},
+                    { name: '💳 Bank', value: formattedBank || '0', inline: true},
                     { name: '💰 Stash', value: user.stash.toString() || '0', inline: true},
                     { name: '💼 Occupation', value: user.currentJob ? user.currentJob.name : 'Unemployed', inline: true}, // Check if user.currentjob exists
                 );

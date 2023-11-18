@@ -50,6 +50,7 @@ module.exports = {
                     .setStyle(3);
 
                 itemsRow.addComponents(button);
+                //console.log(button)
             }
 
             // Create buttons for navigating between pages
@@ -68,7 +69,13 @@ module.exports = {
             // Add pagination buttons to the row
             navigationRow.addComponents(previousButton, nextButton);
 
-            interaction.reply({ embeds: [embed], components: [itemsRow, navigationRow] });
+            // Check if this is a button interaction and update the message
+            if (interaction.isButton()) {
+                interaction.update({ embeds: [embed], components: [itemsRow, navigationRow] });
+            } else {
+                interaction.reply({ embeds: [embed], components: [itemsRow, navigationRow] });
+            }
+            
         } catch (error) {
             console.error(error);
             interaction.reply({ content: 'There was an error fetching the shop items.', ephemeral: true });

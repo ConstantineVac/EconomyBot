@@ -1,11 +1,12 @@
 // eventHandlers/buttonClick.js
+const { ButtonBuilder, ActionRowBuilder, EmbedBuilder } = require('discord.js');
 
 const { getDatabase } = require('../database');
 
 module.exports = async (interaction) => {
     // Extract action and new page number from the button custom id
     const [action, newPage] = interaction.customId.split('_');
-
+    
     if (action === 'previousPageRec' || action === 'nextPageRec') {
         // Call the 'recipe' command with the new page number
         interaction.client.commands.get('recipe').execute(interaction, parseInt(newPage));
@@ -21,9 +22,13 @@ module.exports = async (interaction) => {
     } else if (action === 'previousPageShop' || action === 'nextPageShop') {    
         // Call the 'chest' command with the new page number
         interaction.client.commands.get('shop').execute(interaction, parseInt(newPage));
-        
+
+    } else if (action === 'previousPageAdminItem' || action === 'nextPageAdminItem') {
+        // Call the 'admin-item-list' command with the new page number
+        interaction.client.commands.get('admin-item-list').execute(interaction, parseInt(newPage)); 
+
     } else {
-        // Extract item id from the button custom id by removing "purchase_"
+        // Extract item id from the button custom id
         const itemId = Number(interaction.customId); // Convert to number
 
         // Retrieve user balance and item price from the database
@@ -74,6 +79,5 @@ module.exports = async (interaction) => {
         } else {
             interaction.reply('You do not have enough coins to purchase this item.');
         }
-
     }
 };

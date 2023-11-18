@@ -50,8 +50,8 @@ module.exports = {
                 const newUser = {
                     _id: targetUserId,
                     username: interaction.options.getUser('recipient').username,
-                    cash: 0,
-                    bank: 0, 
+                    cash: 0.0,
+                    bank: 0.0, 
                     stash: 0,
                     inventory: [ ],
                     secondaryInventory: [ ],
@@ -82,13 +82,18 @@ module.exports = {
 
             // If the update operation didn't modify or insert any documents, send a reply and stop execution
             if (result.modifiedCount === 0 && result.upsertedCount === 0) {
-                return interaction.reply('Failed to update coins. Please try again.');
+                return interaction.reply('Failed to update balance. Please try again.');
             }
 
             // Retrieve the target user's document from the database
             const targetUser = await getDatabase().collection('users').findOne({ _id: targetUserId });
+
+            // Format the money for better readabillity.
+            const formattedAmount = amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+            const formattedBank = targetUser.bank.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+
             // Send a reply with the new balance of the target user
-            interaction.reply(`<@${interaction.user.id}> ${action === 'Add' ? 'deposited' : 'withdrew'} ${amount} coins to/from <@${targetUser._id}>'s account. Their balance is now ${targetUser.bank} coins.`);
+            interaction.reply(`<@${interaction.user.id}> ${action === 'Add' ? 'deposited' : 'withdrew'} ${formattedAmount} to/from <@${targetUser._id}>'s account. Their balance is now ${formattedBank}.`);
         } catch (error) {
             // If there was an error, log it to the console and send a reply
             console.error(error);

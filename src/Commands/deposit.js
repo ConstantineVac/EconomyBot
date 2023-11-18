@@ -5,13 +5,13 @@ module.exports = {
     // The name of the command
     name: 'deposit',
     // A description of the command
-    description: 'Deposit coins to your bank',
+    description: 'Deposit money to your bank',
     // The function to execute when the command is called
     // The options of the command
     options: [{
         name: 'amount',
-        type: 4, // The type of the option
-        description: 'The amount of coins to deposit',
+        type: 10, // The type of the option
+        description: 'The amount of money to deposit',
         required: true, // Whether the option is required or optional
     }],
     async execute(interaction) {
@@ -27,8 +27,8 @@ module.exports = {
                 const newUser = {
                     _id: userId,
                     username: interaction.user.username,
-                    balance: 0,
-                    cash: 0,
+                    balance: 0.0,
+                    cash: 0.0,
                     stash: 0,
                     inventory: Array.from({ length: 200 }),
                     secondaryInventory: Array.from({ length: 300 }),
@@ -42,7 +42,7 @@ module.exports = {
             }
 
             // Get the amount to deposit from the user's input, defaulting to 0 if not provided
-            const amountToDeposit = interaction.options.getInteger('amount') || 0;
+            const amountToDeposit = interaction.options.getNumber('amount') || 0;
 
             // Check if the user has enough cash to deposit
             if (user.cash >= amountToDeposit && amountToDeposit > 0) {
@@ -51,9 +51,12 @@ module.exports = {
                     { _id: userId },
                     { $inc: { cash: -amountToDeposit, bank: amountToDeposit } }
                 );
-
+                
+                // Format the amount of money for better readability.
+                formattedAmount = amountToDeposit.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+                
                 // Send a reply confirming the deposit
-                interaction.reply(`Successfully deposited 🪙 ${amountToDeposit} coins to your bank.`);
+                interaction.reply(`Successfully deposited ${formattedAmount} to your bank.`);
             } else {
                 // Send a reply if the user has insufficient funds or entered an invalid amount
                 interaction.reply('Invalid amount or insufficient funds in your cash to deposit.');

@@ -5,13 +5,13 @@ module.exports = {
     // The name of the command
     name: 'withdraw',
     // A description of the command
-    description: 'Withdraw coins from your bank',
+    description: 'Withdraw money from your bank',
     // The function to execute when the command is called
     // The options of the command
     options: [{
         name: 'amount',
-        type: 4, // The type of the option
-        description: 'The amount of coins to withdraw',
+        type: 10, // The type of the option
+        description: 'The amount of money to withdraw',
         required: true, // Whether the option is required or optional
     }],
     async execute(interaction) {
@@ -27,8 +27,8 @@ module.exports = {
                 const newUser = {
                     _id: userId,
                     username: interaction.user.username,
-                    balance: 0,
-                    cash: 0,
+                    balance: 0.0,
+                    cash: 0.0,
                     stash: 0,
                     inventory: Array.from({ length: 200 }),
                     secondaryInventory: Array.from({ length: 300 }),
@@ -42,7 +42,7 @@ module.exports = {
             }
 
             // Get the amount to deposit from the user's input, defaulting to 0 if not provided
-            const amountToWithdraw = interaction.options.getInteger('amount') || 0;
+            const amountToWithdraw = interaction.options.getNumber('amount') || 0;
 
             // Check if the user has enough coins in the bank to withdraw
             if (user.bank >= amountToWithdraw && amountToWithdraw > 0) {
@@ -52,8 +52,11 @@ module.exports = {
                     { $inc: { bank: -amountToWithdraw, cash: amountToWithdraw } }
                 );
 
+                // Format the amount for better readability.
+                const formattedAmount = amountToWithdraw.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+
                 // Send a reply confirming the withdrawal
-                interaction.reply(`Successfully withdrew 🪙 ${amountToWithdraw} coins from your bank.`);
+                interaction.reply(`Successfully withdrew ${formattedAmount} from your bank.`);
             } else {
                 // Send a reply if the user has insufficient funds or entered an invalid amount
                 interaction.reply('Invalid amount or insufficient funds in your bank for withdrawal.');

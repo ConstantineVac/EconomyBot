@@ -55,7 +55,7 @@ client.once('ready', async () => {
         options: command.options,
     }));
 
-    await client.guilds.cache.get(process.env.GUILD_ID).commands.set(commands);
+    await client.application.commands.set(commands);
     console.log('✅ All commands have been registered successfully!');
 });
 
