@@ -38,7 +38,7 @@ module.exports = {
             !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST2) &&
             !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ELENI)
         ) {
-            return interaction.reply('You do not have the required role to use this command.');
+            return interaction.reply({ content: 'You do not have the required role to use this command.', ephemeral: true });
         }
 
         if (!targetUser || !inventoryType) {
@@ -56,11 +56,14 @@ module.exports = {
     let embed;
 
     if (inventoryType === 'inventory') {
-        embed = createInventoryEmbed(user, 'Inventory', targetUser);
+        embed = createInventoryEmbed(targetUser, 'inventory', user);
+
     } else if (inventoryType === 'secondary_inventory') {
-        embed = createInventoryEmbed(user, 'Chest', targetUser);
+        embed = createInventoryEmbed(targetUser, 'secondary_inventory', user);
+
     } else if (inventoryType === 'balance') {
         embed = await createBalanceEmbed(user, targetUser);
+
     } else {
         return interaction.reply('Invalid inspection type.');
     }
@@ -100,16 +103,18 @@ function formatInventory(inventory) {
 }
 
 // Helper function to create an inventory or balance embed
-function createInventoryEmbed(user, targetUser, inventoryName) {
+// Helper function to create an inventory or balance embed
+function createInventoryEmbed(targetUser, inventoryName, user) {
     //console.log(`Username-Embed1: ${targetUser.tag}`);
     const embed = new EmbedBuilder()
         .setColor(0x00FF00) // Green color
         .setTitle(`${inventoryName} Inspection - ${targetUser.tag}`)
-        .addFields({ name: inventoryName, value: formatInventory(user[inventoryName.toLowerCase()]) })
+        .addFields({ name: inventoryName, value: `${formatInventory(user[inventoryName.toLowerCase()])}` })
         .setTimestamp();
 
     return embed;
 }
+
 
 // Helper function to create a balance embed
 async function createBalanceEmbed(user, targetUser) {

@@ -59,7 +59,7 @@ module.exports = {
                 );
 
             // Send the embed as a reply
-            interaction.reply({ embeds: [embed] });
+            interaction.reply({ embeds: [embed], ephemeral: true });
         } catch (error) {
             console.error(error);
             interaction.reply({ content: 'There was an error checking your balance.', ephemeral: true });
