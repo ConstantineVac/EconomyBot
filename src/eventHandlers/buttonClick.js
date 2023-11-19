@@ -26,7 +26,7 @@ module.exports = async (interaction) => {
     } else if (action === 'previousPageAdminItem' || action === 'nextPageAdminItem') {
         // Call the 'admin-item-list' command with the new page number
         interaction.client.commands.get('admin-item-list').execute(interaction, parseInt(newPage)); 
-
+        
     } else {
         // Extract item id from the button custom id
         const itemId = Number(interaction.customId); // Convert to number

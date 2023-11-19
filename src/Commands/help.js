@@ -10,36 +10,38 @@ module.exports = {
         // Sort commands alphabetically by name
         commands.sort((a, b) => a.name.localeCompare(b.name));
 
+        // Check if the user has the specific role
+        const hasSpecificRole = interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST1) ||
+                                interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST2) ||
+                                interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ELENI);
+
         // Separate commands into user and admin categories
         const userCommands = [];
         const adminCommands = [];
 
-        commands.forEach((command, index) => {
-            // Check if the command name includes "admin" and user has the admin role
-            if (command.name.toLowerCase().includes('admin') && (
-                interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST) ||
-                interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ELENI)
-            )) {
-                adminCommands.push({ index: index + 1, command });
+        commands.forEach((command) => {
+            // Check if the command name starts with "admin"
+            if (command.name.toLowerCase().startsWith('admin')) {
+                adminCommands.push(command);
             } else {
-                userCommands.push({ index: index + 1, command });
+                userCommands.push(command);
             }
         });
 
-        // Create a new embed for user commands
+        // Create embed for user commands
         const userEmbed = new EmbedBuilder().setColor(0x0099FF).setTitle('**User Commands:**');
-        userCommands.forEach(({ index, command }) => {
-            userEmbed.addFields({ name: `${index}. /${command.name}`, value: command.description });
+        userCommands.forEach((command, index) => {
+            userEmbed.addFields({ name: `${index + 1}. /${command.name}`, value: command.description });
         });
 
         // Send the user embed to the user
         await interaction.reply({ embeds: [userEmbed], ephemeral: true });
 
-        // If there are admin commands, send the admin embed as a follow-up
-        if (adminCommands.length > 0) {
+        // If the user has the specific role, create and send the admin embed as a follow-up
+        if (hasSpecificRole && adminCommands.length > 0) {
             const adminEmbed = new EmbedBuilder().setColor(0xFF0000).setTitle('**Admin Commands:**');
-            adminCommands.forEach(({ index, command }) => {
-                adminEmbed.addFields({ name: `${index}. /${command.name}`, value: command.description });
+            adminCommands.forEach((command, index) => {
+                adminEmbed.addFields({ name: `${index + 1}. /${command.name}`, value: command.description });
             });
 
             await interaction.followUp({ embeds: [adminEmbed], ephemeral: true });
