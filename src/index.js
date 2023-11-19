@@ -2,7 +2,7 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const { connect, getDatabase } = require('./database');  // Import the connect function from the database module
-const { Client, GatewayIntentBits, Collection } = require('discord.js'); 
+const { Client, GatewayIntentBits, Collection, EmbedBuilder, StringSelectMenuBuilder} = require('discord.js'); 
 
 const client = new Client({
     intents: [

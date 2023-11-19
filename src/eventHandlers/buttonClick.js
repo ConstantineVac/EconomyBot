@@ -1,5 +1,5 @@
 // eventHandlers/buttonClick.js
-const { ButtonBuilder, ActionRowBuilder, EmbedBuilder } = require('discord.js');
+const { ButtonBuilder, ActionRowBuilder, EmbedBuilder, StringSelectMenuBuilder, MessageCollector } = require('discord.js');
 
 const { getDatabase } = require('../database');
 
@@ -40,7 +40,7 @@ module.exports = async (interaction) => {
         }
 
         // Retrieve the item from the shop collection using the correct field name
-        const shopItem = await getDatabase().collection('shop').findOne({ id: itemId });
+        const shopItem = await getDatabase().collection('items').findOne({ id: itemId });
 
         // Check if the item exists
         if (!shopItem) {
@@ -60,24 +60,61 @@ module.exports = async (interaction) => {
             return interaction.reply('Your inventory is full! Please store some items in your secondary inventory or discard them.');
         }
 
-        if (userBalance >= itemPrice) {
-            // Deduct price from user's balance and add item to user's inventory
-            await getDatabase().collection('users').updateOne(
-                { _id: interaction.user.id },
-                { 
-                    $inc: { bank: -itemPrice },
-                    $push: {
-                        inventory: {
-                            $each: [{ id: itemId, name: shopItem.name, emoji: shopItem.emoji }],
-                            $position: 0 // Add the new item to the beginning of the array
-                        }
-                    }
-                }
-            );
+        // Prompt user to choose quantity.
+        await interaction.reply({ content: 'Choose quantity:', ephemeral: true });
 
-            interaction.reply(`You have successfully purchased 1 x ${shopItem.emoji} ${shopItem.name}!`);
-        } else {
-            interaction.reply('You do not have enough coins to purchase this item.');
-        }
+        // Create a filter to collect messages from the user who initiated the interaction
+        const filter = (msg) => msg.author.id === interaction.user.id;
+
+        // Create a message collector
+        const collector = interaction.channel.createMessageCollector({ filter, time: 30000 }); // Set a time limit, e.g., 30 seconds
+
+        // Listen for messages
+        collector.on('collect', async (message) => {
+            // Check if the collected message is a number
+            const quantity = parseInt(message.content);
+
+            // Check if the quantity is a valid number
+            if (!isNaN(quantity) && quantity > 0) {
+                // Process the user's response and continue with your logic
+                // Deduct price from user's balance and add item to user's inventory
+                if (userBalance >= itemPrice * quantity) {
+                    await getDatabase().collection('users').updateOne(
+                        { _id: interaction.user.id },
+                        { 
+                            $inc: { bank: -itemPrice * quantity },
+                            $push: {
+                                inventory: {
+                                    $each: Array.from({ length: quantity }, () => ({ id: itemId, name: shopItem.name, emoji: shopItem.emoji })),
+                                    $position: 0 // Add the new items to the beginning of the array
+                                }
+                            }
+                        }
+                    );
+                    
+                    let total = itemPrice * quantity;
+
+                    interaction.followUp(`You have successfully purchased ${quantity} x ${shopItem.emoji} ${shopItem.name}!`);
+                    // Delete the user's message
+                    message.delete().catch(console.error);
+                    interaction.followUp(`Your purchase receipt ${total.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}. Thank you 🎊`)
+                } else {
+                    interaction.followUp('You do not have enough money to purchase this item.');
+                }
+
+                // Stop the collector since we've collected the response
+                collector.stop();
+            } else {
+                // Inform the user that the input is invalid
+                interaction.followUp('Invalid quantity. Please enter a valid number greater than 0.');
+            }
+        });
+
+        // Handle collector end event (e.g., if the time limit is reached)
+        collector.on('end', (collected, reason) => {
+            if (reason === 'time') {
+                interaction.followUp('Time limit exceeded. Please try again.');
+            }
+        });
     }
 };

@@ -16,18 +16,25 @@ module.exports = {
             // Fetch available jobs from the database
             const jobs = await getDatabase().collection('jobs').find().toArray();
 
-            const jobNames = jobs.map(job => job.name);
+            const jobOptions = jobs.map(job => ({
+                label: `${job.name} - Salary: ${job.salary.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} / 10min`,   // Include salary / 10min  in the label
+                value: job.name,
+            }));
 
             // Prompt user to choose a job
-            await interaction.reply({ content: 'Choose a job:', ephemeral: true, components: [{
-                type: 1,
+            await interaction.reply({
+                content: 'Choose a job:',
+                ephemeral: true,
                 components: [{
-                    type: 3,
-                    custom_id: 'job_selection',
-                    options: jobNames.map(job => ({ label: job, value: job })),
-                    placeholder: 'Select a job',
+                    type: 1,
+                    components: [{
+                        type: 3,
+                        custom_id: 'job_selection',
+                        options: jobOptions,
+                        placeholder: 'Select a job',
+                    }],
                 }],
-            }]});
+            });
 
             const jobSelection = await interaction.channel.awaitMessageComponent({
                 filter: i => i.customId === 'job_selection' && i.user.id === interaction.user.id,

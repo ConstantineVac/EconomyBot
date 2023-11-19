@@ -1,20 +1,58 @@
-const { ActionRowBuilder, ButtonBuilder, EmbedBuilder } = require('discord.js');
+const { ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder, ButtonBuilder } = require('discord.js');
 const { getDatabase } = require('../database');
 
 const ITEMS_PER_PAGE = 5;
 
+
 module.exports = {
     name: 'shop',
-    description: 'View items available in the shop',
+    description: 'Choose a shop',
     async execute(interaction, pageNumber = 1) {
         try {
-            // Retrieve shop items from the database
-            const shopItems = await getDatabase().collection('shop').find().toArray();
+            // Retrieve unique store names from the items collection
+            const uniqueStoreNames = await getUniqueStoreNames();
 
-            if (shopItems.length === 0) {
-                return interaction.reply('The shop is currently empty. Check back later!');
+            if (uniqueStoreNames.length === 0) {
+                return interaction.reply({ content: 'No stores found.', ephemeral: true });
             }
 
+            // Retrieve all items.
+            //const itemList = await getDatabase().collection('items').find().toArray();
+
+            // Create a row and a select menu with dynamic options
+            const row = new ActionRowBuilder().addComponents(
+                new StringSelectMenuBuilder()
+                    .setCustomId('shop_selection')
+                    .setPlaceholder('Select a shop')
+                    .addOptions(uniqueStoreNames.map(store => ({ label: store, value: store })))
+            );
+
+            // Send a message with the row and select menu
+            await interaction.reply({
+                content: 'Choose a shop:',
+                components: [row],
+                ephemeral: true,
+            });
+
+            // Based on the store selected load the correct shop with all the items whose field store has the name of the selection
+            const shopSelection = await interaction.channel.awaitMessageComponent({
+                filter: i => i.customId === 'shop_selection' && i.user.id === interaction.user.id,
+                //time: 30000, // 30 seconds timeout
+            });
+
+            if (!shopSelection) {
+                return interaction.followUp('Shop selection timed out.');
+            }
+
+            const selectedShopName = shopSelection.values[0];
+            const selectedShop = uniqueStoreNames.find(shop => shop.name === selectedShopName);
+
+            // Load items from the selected store to embed
+            const shopItems = await getDatabase().collection('items').find({
+                store: selectedShopName,
+                isForSale: true,
+            }).toArray();
+            
             // Calculate the total number of pages
             const totalPages = Math.ceil(shopItems.length / ITEMS_PER_PAGE);
 
@@ -28,7 +66,7 @@ module.exports = {
             const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, shopItems.length);
 
             const embed = new EmbedBuilder()
-                .setTitle('🏪 Shop')
+                .setTitle(`🏪 ${selectedShopName}`)
                 .setThumbnail('https://i.postimg.cc/g2X1Qfkq/shop.png')
                 .setColor('DarkRed')
                 .setDescription(`Available items in the shop (Page ${pageNumber}/${totalPages})`);
@@ -40,7 +78,7 @@ module.exports = {
                 const item = shopItems[i];
 
                 embed.addFields({
-                    name: `${item.emoji} **${item.name}** - 🪙 **${item.price}** coins`,
+                    name: `${item.emoji} **${item.name}** - 🪙 **${item.price.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}**`,
                     value: ` Quantity: 1pcs`
                 });
 
@@ -71,14 +109,21 @@ module.exports = {
 
             // Check if this is a button interaction and update the message
             if (interaction.isButton()) {
-                interaction.update({ embeds: [embed], components: [itemsRow, navigationRow] });
+                interaction.update({ embeds: [embed], components: [itemsRow, navigationRow], ephemera: true });
             } else {
-                interaction.reply({ embeds: [embed], components: [itemsRow, navigationRow] });
+                interaction.followUp({ embeds: [embed], components: [itemsRow, navigationRow], ephemeral: true});
             }
-            
         } catch (error) {
             console.error(error);
-            interaction.reply({ content: 'There was an error fetching the shop items.', ephemeral: true });
+            interaction.followUp({ content: 'An error occurred while fetching store names.', ephemeral: true });
         }
     },
 };
+
+
+// Function to retrieve unique store names from the items collection
+async function getUniqueStoreNames() {
+    const itemsCollection = getDatabase().collection('items');
+    const uniqueStoreNames = await itemsCollection.distinct('store');
+    return uniqueStoreNames.filter(Boolean); // Remove any falsy values (null, undefined, etc.)
+}

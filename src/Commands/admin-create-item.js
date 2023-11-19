@@ -1,62 +1,103 @@
-// admin-add-item.js
+// admin-create-item.js
 
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder } = require('discord.js');
 const { getDatabase } = require('../database');
+const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
     name: 'admin-create-item',
-    description: 'Add a new item to the items collection',
+    description: 'Create a new item for the economy bot.',
     options: [
         {
-            name: 'name',
-            description: 'Name of the new item',
-            type: 3, // String
+            name: 'new_name',
+            description: 'Enter the new name for the item',
+            type: 3, // String type
             required: true,
         },
         {
-            name: 'emoji',
-            description: 'Emoji for the new item',
-            type: 3, // String
+            name: 'new_emoji',
+            description: 'Enter the new emoji for the item',
+            type: 3, // String type
+            required: true,
+        },
+        {
+            name: 'price',
+            description: 'Enter the new price for the item',
+            type: 10, // Integer type
+            required: true,
+        },
+        {
+            name: 'store',
+            description: 'Enter the new store for the item',
+            type: 3, // String type
+            required: true,
+        },
+        {
+            name: 'is_for_sale',
+            description: 'Specify if the item is for sale (true/false)',
+            type: 3, // Boolean type
+            choices: [
+                { name: 'Usable ✅', value: 'true' },
+                { name: 'Discardable ❌', value: 'false' },
+            ],
             required: true,
         },
     ],
     async execute(interaction) {
         try {
-            // Check if the user has the required role
-            if (!interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST) && !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ELENI)) {
+            // Check if the user has the required role (replace ROLE_ID with the actual role ID)
+            if (
+                !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST) &&
+                !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ELENI)
+            ) {
                 return interaction.reply('You do not have the required role to use this command.');
             }
 
-            // Retrieve data from options
-            const itemName = interaction.options.getString('name');
-            const itemEmoji = interaction.options.getString('emoji');
+            // Retrieve user inputs
+            const newName = interaction.options.getString('new_name');
+            const newEmoji = interaction.options.getString('new_emoji');
+            const newPrice = interaction.options.getNumber('price');
+            const newStore = interaction.options.getString('store');
+            const isForSale = interaction.options.getString('is_for_sale');
 
-            // Validate data (add more validation if needed)
-            if (!itemName || !itemEmoji) {
-                return interaction.reply('Please provide a name and an emoji for the new item.');
+            // Check whether the item already exists in the database
+            const existingItem = await getDatabase().collection('items').findOne({ name: newName });
+            if (existingItem) {
+                return interaction.reply({ content: 'An item with the same name already exists.', ephemeral: true });
             }
 
-            // Add the new item to the database
-            const newItem = {
-                id: await getNextItemId(), // Function to get the next ID
-                name: itemName,
-                emoji: itemEmoji,
-            };
+            // Find the highest current id in the collection
+            const highestIdItem = await getDatabase().collection('items').findOne({}, { sort: { id: -1 } });
 
-            // Insert the new item into the 'items' collection
-            await getDatabase().collection('items').insertOne(newItem);
+            // Calculate the new id (increment by 1)
+            const newId = highestIdItem ? highestIdItem.id + 1 : 1;
 
-            // Respond with the embed and buttons
-            interaction.reply(`Successfully Added ${newItem.emoji} ${newItem.name} to the item list !`);
+            // Add new item to the database
+            await getDatabase().collection('items').insertOne({
+                id: newId,
+                name: newName,
+                emoji: newEmoji,
+                price: newPrice,
+                store: newStore,
+                isForSale: Boolean(isForSale),
+            });
+
+            // Create an embed to display the changes
+            const embed = new EmbedBuilder()
+                .setTitle('✅ Item Created')
+                .setColor('Green')
+                .setDescription(`Created the item: ${newName}`)
+                .addFields(
+                    { name: 'Name', value: newName.toString(), inline: true },
+                    { name: 'Emoji', value: newEmoji.toString(), inline: true },
+                    { name: 'Price', value: newPrice.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), inline: true },
+                    { name: 'Store', value: newStore.toString(), inline: true },
+                    { name: 'Is For Sale', value: isForSale.toString(), inline: true }
+                );
+
+            interaction.reply({ embeds: [embed], ephemeral: true });
         } catch (error) {
             console.error(error);
-            interaction.reply({ content: 'There was an error adding the new item.', ephemeral: true });
+            interaction.reply({ content: 'An error occurred while creating the item.', ephemeral: true });
         }
     },
 };
-
-// Function to get the next item ID (assuming 'items' collection has an 'id' field)
-async function getNextItemId() {
-    const lastItem = await getDatabase().collection('items').findOne({}, { sort: { id: -1 } });
-    return lastItem ? lastItem.id + 1 : 1;
-}
