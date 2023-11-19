@@ -34,7 +34,7 @@ module.exports = {
     // The function to execute when the command is called
     async execute(interaction) {
         // Check if the user has the required role (replace ROLE_ID with the actual role ID)
-        if (!interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST) && !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ELENI)) {
+        if (!interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST) && !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ELENI) && !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST2)) {
             return interaction.reply('You do not have the required role to use this command.');
         }
 
@@ -45,20 +45,34 @@ module.exports = {
             // Check if the target user exists in the database
             const userExists = await getDatabase().collection('users').findOne({ _id: targetUserId });
 
+            // Load data for each category from the info collection
+            const categories = ['cash', 'bank', 'stash', 'balance', 'currentJob'];
+            const categoryData = {};
+
+            for (const category of categories) {
+                const categoryInfo = await getDatabase().collection('info').findOne({ name: category });
+                categoryData[category] = categoryInfo?.data || {};
+            }
+
+
             // If the user doesn't exist, initialize a new entry
             if (!userExists) {
                 const newUser = {
                     _id: targetUserId,
-                    username: interaction.options.getUser('recipient').username,
-                    cash: 0.0,
-                    bank: 0.0, 
-                    stash: 0,
-                    inventory: [ ],
-                    secondaryInventory: [ ],
+                    username: interaction.user.username,
+                    cash: categoryData.cash.defaultAmount,
+                    bank: categoryData.bank.defaultAmount,
+                    stash: categoryData.stash.defaultAmount,
+                    inventory: [],  // Initialize as an empty array
+                    secondaryInventory: [],  // Initialize as an empty array
+                    currentJob: null
                     // Add other fields as needed
                 };
 
                 await getDatabase().collection('users').insertOne(newUser);
+
+                // Retrieve the newly inserted user
+                user = newUser;
             }
 
             // Get the action and amount from the command options
