@@ -14,8 +14,8 @@ module.exports = {
         },
         {
             name: 'amount',
-            description: 'Amount of coins to send',
-            type: 4, // INTEGER type
+            description: 'Amount of money to send',
+            type: 10, // INTEGER type
             required: true,
         },
     ],
@@ -23,11 +23,11 @@ module.exports = {
         try {
             // Extract options from the interaction
             const recipient = interaction.options.getUser('recipient');
-            const amount = interaction.options.getInteger('amount');
-
+            const amount = interaction.options.getNumber('amount');
+            //console.log(amount)
             // Check if the amount is valid
             if (!amount || amount <= 0) {
-                return interaction.reply({ content: 'Please provide a valid amount of coins to send.', ephemeral: true });
+                return interaction.reply({ content: 'Please provide a valid amount of money to send.', ephemeral: true });
             }
 
             // Retrieve sender and recipient information from the database
@@ -40,14 +40,15 @@ module.exports = {
             }
 
             // Check if the sender has enough coins
-            if (sender.balance < amount) {
-                return interaction.reply({ content: 'You do not have enough coins to send.', ephemeral: true });
+            //console.log(sender.bank)
+            if (sender.bank < amount) {
+                return interaction.reply({ content: 'You do not have enough funds to send.', ephemeral: true });
             }
 
             // Update sender and recipient balances in the database
             await getDatabase().collection('users').updateOne(
                 { _id: interaction.user.id },
-                { $inc: { balance: -amount } }
+                { $inc: { bank: -amount } }
             );
 
             await getDatabase().collection('users').updateOne(
@@ -55,7 +56,7 @@ module.exports = {
                 { $inc: { balance: amount } }
             );
 
-            interaction.reply(`You sent ${amount} coins to ${recipient.username}.`);
+            interaction.reply({content: `You sent ${amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} to ${recipient.username}.`, ephemeral: true});
         } catch (error) {
             console.error(error);
             interaction.reply({ content: 'There was an error processing your request.', ephemeral: true });

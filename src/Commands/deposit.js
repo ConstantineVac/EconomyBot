@@ -56,7 +56,7 @@ module.exports = {
                 formattedAmount = amountToDeposit.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
                 
                 // Send a reply confirming the deposit
-                interaction.reply(`Successfully deposited ${formattedAmount} to your bank.`);
+                interaction.reply({content: `Successfully deposited ${formattedAmount} to your bank.`, ephemeral: true});
             } else {
                 // Send a reply if the user has insufficient funds or entered an invalid amount
                 interaction.reply('Invalid amount or insufficient funds in your cash to deposit.');

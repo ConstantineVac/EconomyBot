@@ -16,16 +16,20 @@ module.exports = {
                 return interaction.reply('You are not currently working on a job. Use /job to start one.');
             }
 
-            const { startTime, totalEarned, salary } = user.currentJob;
+            const { startTime, salary, clockoutPhrase, emoji } = user.currentJob;
             
             // Calculate the elapsed time in minutes
             const elapsedTimeMinutes = Math.floor((new Date() - new Date(startTime)) / (1000 * 60));
 
+            // Get the maxAmount of earnings
+            const maxAmount = user.currentJob.maxAmount || Infinity;
+
             console.log('elapsedTimeMinutes:', elapsedTimeMinutes);
             console.log('salary:', salary);
+            console.log('max Amount:', maxAmount);
 
             // Calculate the maximum possible earnings based on elapsed time
-            const maxEarnings = Math.min(Math.floor(elapsedTimeMinutes / 10) * salary, salary * 12);
+            const maxEarnings = Math.min(Math.floor(elapsedTimeMinutes / 10) * salary, maxAmount);
 
             console.log('maxEarnings:', maxEarnings);
 
@@ -38,7 +42,7 @@ module.exports = {
             // Update the user in the database
             await getDatabase().collection('users').updateOne({ _id: interaction.user.id }, { $set: { cash: user.cash, currentJob: user.currentJob } });
 
-            interaction.reply(`You have successfully cashed out ${maxEarnings.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} from your job earnings.`);
+            interaction.reply({content: `${emoji} You have successfully cashed out ${maxEarnings.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} from your job earnings. ${clockoutPhrase}`, ephemeral: true });
         } catch (error) {
             console.error(error);
             return interaction.reply({ content: 'An error occurred while processing your job cashout.', ephemeral: true });
