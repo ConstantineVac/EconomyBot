@@ -76,9 +76,9 @@ module.exports = {
 
             // Check if this is a button interaction and update the message
             if (interaction.isButton()) {
-            interaction.update({ embeds: [embed], components: [actionRow] });
+                interaction.update({ embeds: [embed], components: [actionRow] });
             } else {
-            interaction.reply({ embeds: [embed], components: [actionRow] });
+                interaction.reply({ embeds: [embed], components: [actionRow] });
             }
         } catch (error) {
             console.error(error);

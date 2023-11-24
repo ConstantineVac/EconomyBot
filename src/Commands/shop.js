@@ -3,21 +3,17 @@ const { getDatabase } = require('../database');
 
 const ITEMS_PER_PAGE = 5;
 
-
 module.exports = {
     name: 'shop',
     description: 'Choose a shop',
     async execute(interaction, pageNumber = 1) {
         try {
-            // Retrieve unique store names from the items collection
+            // Retrieve unique store names from the 'shop' collection
             const uniqueStoreNames = await getUniqueStoreNames();
 
             if (uniqueStoreNames.length === 0) {
                 return interaction.reply({ content: 'No stores found.', ephemeral: true });
             }
-
-            // Retrieve all items.
-            //const itemList = await getDatabase().collection('items').find().toArray();
 
             // Create a row and a select menu with dynamic options
             const row = new ActionRowBuilder().addComponents(
@@ -34,7 +30,7 @@ module.exports = {
                 ephemeral: true,
             });
 
-            // Based on the store selected load the correct shop with all the items whose field store has the name of the selection
+            // Based on the store selected load the correct shop with all the items
             const shopSelection = await interaction.channel.awaitMessageComponent({
                 filter: i => i.customId === 'shop_selection' && i.user.id === interaction.user.id,
                 //time: 30000, // 30 seconds timeout
@@ -45,16 +41,21 @@ module.exports = {
             }
 
             const selectedShopName = shopSelection.values[0];
-            const selectedShop = uniqueStoreNames.find(shop => shop.name === selectedShopName);
 
-            // Load items from the selected store to embed
-            const shopItems = await getDatabase().collection('items').find({
-                store: selectedShopName,
-                isForSale: true,
-            }).toArray();
+            // Load items from the selected shop's items array to embed
+            const selectedShop = await getDatabase().collection('shop').findOne({ shop_name: selectedShopName });
+
+            // Filter the items where isForSale is true
+            const itemsForSale = selectedShop.items.filter(item => item.isForSale === true)
+            //console.log(itemsForSale)
+
+            if (!selectedShop || !selectedShop.items || itemsForSale.length === 0) {
+                return interaction.followUp({content: `No items found in the shop "${selectedShopName}".`, ephemeral: true});
+            }
+            
             
             // Calculate the total number of pages
-            const totalPages = Math.ceil(shopItems.length / ITEMS_PER_PAGE);
+            const totalPages = Math.ceil(itemsForSale.length / ITEMS_PER_PAGE);
 
             // Retrieve the page number from the interaction (default to 1 if not provided)
             if (interaction.options) {
@@ -63,7 +64,7 @@ module.exports = {
 
             // Calculate the start and end indices for the current page
             const startIndex = (pageNumber - 1) * ITEMS_PER_PAGE;
-            const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, shopItems.length);
+            const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, itemsForSale.length);
 
             const embed = new EmbedBuilder()
                 .setTitle(`🏪 ${selectedShopName}`)
@@ -75,7 +76,7 @@ module.exports = {
             const navigationRow = new ActionRowBuilder();
 
             for (let i = startIndex; i < endIndex; i++) {
-                const item = shopItems[i];
+                const item = itemsForSale[i];
 
                 embed.addFields({
                     name: `${item.emoji} **${item.name}** - 🪙 **${item.price.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}**`,
@@ -111,7 +112,7 @@ module.exports = {
             if (interaction.isButton()) {
                 interaction.update({ embeds: [embed], components: [itemsRow, navigationRow], ephemera: true });
             } else {
-                interaction.followUp({ embeds: [embed], components: [itemsRow, navigationRow], ephemeral: true});
+                interaction.followUp({ embeds: [embed], components: [itemsRow, navigationRow], ephemeral: true });
             }
         } catch (error) {
             console.error(error);
@@ -120,10 +121,9 @@ module.exports = {
     },
 };
 
-
-// Function to retrieve unique store names from the items collection
+// Function to retrieve unique store names from the 'shop' collection
 async function getUniqueStoreNames() {
-    const itemsCollection = getDatabase().collection('items');
-    const uniqueStoreNames = await itemsCollection.distinct('store');
+    const shopCollection = getDatabase().collection('shop');
+    const uniqueStoreNames = await shopCollection.distinct('shop_name');
     return uniqueStoreNames.filter(Boolean); // Remove any falsy values (null, undefined, etc.)
 }

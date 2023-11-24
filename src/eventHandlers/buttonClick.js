@@ -6,7 +6,7 @@ const { getDatabase } = require('../database');
 module.exports = async (interaction) => {
     // Extract action and new page number from the button custom id
     const [action, newPage] = interaction.customId.split('_');
-    
+    console.log([action, newPage]);
     if (action === 'previousPageRec' || action === 'nextPageRec') {
         // Call the 'recipe' command with the new page number
         interaction.client.commands.get('recipe').execute(interaction, parseInt(newPage));
@@ -25,8 +25,13 @@ module.exports = async (interaction) => {
 
     } else if (action === 'previousPageAdminItem' || action === 'nextPageAdminItem') {
         // Call the 'admin-item-list' command with the new page number
-        interaction.client.commands.get('admin-item-list').execute(interaction, parseInt(newPage)); 
+        interaction.client.commands.get('admin-item-list').execute(interaction, parseInt(newPage));
         
+    } else if (action === 'previousServer' || action === 'nextServer') {
+        // // Check if options is defined before trying to access its properties
+        // const specifiedChannel = interaction.options && interaction.options.getChannel('channel');
+        interaction.client.commands.get('owner-server-report').execute(interaction, parseInt(newPage));
+
     } else {
         // Extract item id from the button custom id
         const itemId = Number(interaction.customId); // Convert to number

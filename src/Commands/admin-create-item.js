@@ -26,20 +26,33 @@ module.exports = {
             required: true,
         },
         {
-            name: 'store',
-            description: 'Enter the new store for the item',
-            type: 3, // String type
-            required: true,
+            name: 'is_for_sale',
+            description: 'Specify if the item is for sale (true/false)',
+            type: 3, // Boolean type
+            choices: [
+                { name: 'For Sale ✅', value: 'true' },
+                { name: 'Not for sale ❌', value: 'false' },
+            ],
+            required: false,
         },
         {
-            name: 'is_for_sale',
+            name: 'tradable',
+            description: 'Specify if the item is for sale (true/false)',
+            type: 3, // Boolean type
+            choices: [
+                { name: 'Tradable ✅', value: 'true' },
+                { name: 'Not for trade ❌', value: 'false' },
+            ],
+            required: false,
+        },{
+            name: 'usable',
             description: 'Specify if the item is for sale (true/false)',
             type: 3, // Boolean type
             choices: [
                 { name: 'Usable ✅', value: 'true' },
                 { name: 'Discardable ❌', value: 'false' },
             ],
-            required: true,
+            required: false,
         },
     ],
     async execute(interaction) {
@@ -57,8 +70,9 @@ module.exports = {
             const newName = interaction.options.getString('new_name');
             const newEmoji = interaction.options.getString('new_emoji');
             const newPrice = interaction.options.getNumber('price');
-            const newStore = interaction.options.getString('store');
-            const isForSale = interaction.options.getString('is_for_sale');
+            const isForSale = interaction.options.getString('is_for_sale') || 'true';
+            const tradable = interaction.options.getString('tradable') || 'true';
+            const usable = interaction.options.getString('usable') || 'false';
 
             // Check whether the item already exists in the database
             const existingItem = await getDatabase().collection('items').findOne({ name: newName });
@@ -78,8 +92,9 @@ module.exports = {
                 name: newName,
                 emoji: newEmoji,
                 price: newPrice,
-                store: newStore,
                 isForSale: Boolean(isForSale),
+                tradable: Boolean(tradable),
+                usable: Boolean(usable),
             });
 
             // Create an embed to display the changes
@@ -91,8 +106,10 @@ module.exports = {
                     { name: 'Name', value: newName.toString(), inline: true },
                     { name: 'Emoji', value: newEmoji.toString(), inline: true },
                     { name: 'Price', value: newPrice.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), inline: true },
-                    { name: 'Store', value: newStore.toString(), inline: true },
-                    { name: 'Is For Sale', value: isForSale.toString(), inline: true }
+                    // { name: 'Store', value: newStore.toString(), inline: true },
+                    { name: 'Is For Sale', value: isForSale.toString(), inline: true },
+                    { name: 'Tradable', value: tradable.toString(), inline: true},
+                    { name: 'Usable', value: tradable.toString(), inline: true},
                 );
 
             interaction.reply({ embeds: [embed], ephemeral: true });

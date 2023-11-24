@@ -74,8 +74,15 @@ module.exports = {
             // Specify the name of your jobs collection
             const jobsCollection = database.collection('jobs');
 
+            // Find the highest current id in the collection
+            const highestIdJob = await getDatabase().collection('jobs').findOne({}, { sort: { id: -1 } });
+
+            // Calculate the new id (increment by 1)
+            const newId = highestIdJob ? highestIdJob.id + 1 : 1;
+
             // Create a new job object without using a model
             const newJob = {
+                id: newId,
                 name: jobName,
                 salary: jobSalary,
                 role: roleName.id, // Store the role ID in the database

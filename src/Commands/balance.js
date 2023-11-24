@@ -44,6 +44,7 @@ module.exports = {
             // Format the money for better readability
             const formattedCash = user.cash.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
             const formattedBank = user.bank.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+            const formattedStash = user.stash.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
             // Create an embed to display the user's balance
             const embed = new EmbedBuilder()
@@ -54,7 +55,7 @@ module.exports = {
                 .addFields(
                     { name: `${categoryData.cash?.emoji} ${categoryData.cash?.name}`, value: formattedCash || '0', inline: true },
                     { name: `${categoryData.bank?.emoji} ${categoryData.bank?.name}`, value: formattedBank || '0', inline: true },
-                    { name: `${categoryData.stash?.emoji} ${categoryData.stash?.name}`, value: user.stash.toString() || '0', inline: true },
+                    { name: `${categoryData.stash?.emoji} ${categoryData.stash?.name}`, value: formattedStash || '0', inline: true },
                     { name: `${categoryData.currentJob?.emoji} ${categoryData.currentJob?.name}`, value: user.currentJob ? user.currentJob.name : 'Unemployed', inline: true },
                 );
 

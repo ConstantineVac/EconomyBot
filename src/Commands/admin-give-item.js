@@ -1,7 +1,7 @@
 const { getDatabase } = require('../database');
 
 module.exports = {
-    name: 'give-item',
+    name: 'admin-give-item',
     description: 'Give an item to a user',
     options: [
         {
@@ -79,7 +79,7 @@ module.exports = {
 
             // Add the item to the user's inventory multiple times
             for (let i = 0; i < amount; i++) {
-                inventoryToUpdate.push({ id: item.id, name: item.name, emoji: item.emoji});
+                inventoryToUpdate.push({ id: item.id, name: item.name, emoji: item.emoji, tradable: item.tradable, isIllegal: item.isIllegal, onUse: item.onUse, isUsable: item.isUsable });
             }
             
             // Update the user in the database
