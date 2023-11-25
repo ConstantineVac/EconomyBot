@@ -6,7 +6,7 @@ const { getDatabase } = require('../database');
 module.exports = async (interaction) => {
     // Extract action and new page number from the button custom id
     const [action, newPage] = interaction.customId.split('_');
-    console.log([action, newPage]);
+    //console.log([action, newPage]);
     if (action === 'previousPageRec' || action === 'nextPageRec') {
         // Call the 'recipe' command with the new page number
         interaction.client.commands.get('recipe').execute(interaction, parseInt(newPage));
@@ -90,7 +90,7 @@ module.exports = async (interaction) => {
                             $inc: { bank: -itemPrice * quantity },
                             $push: {
                                 inventory: {
-                                    $each: Array.from({ length: quantity }, () => ({ id: itemId, name: shopItem.name, emoji: shopItem.emoji })),
+                                    $each: Array.from({ length: quantity }, () => ({ itemId: itemId })),
                                     $position: 0 // Add the new items to the beginning of the array
                                 }
                             }

@@ -23,9 +23,8 @@ module.exports = {
         {
             name: 'item',
             description: 'Select the item to give',
-            type: 3, // Integer type or 3 if it's a string (item name)
+            type: 3, // String type (item name)
             required: true,
-            //choices: [], // Will be dynamically populated IF we could have more than 25
         },
         {
             name: 'amount',
@@ -37,9 +36,11 @@ module.exports = {
     async execute(interaction) {
         try {
             // Check if the user has the required role (replace ROLE_ID with the actual role ID)
-            if (!interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST1) && 
-                !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST2) && 
-                !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ELENI)) {
+            if (
+                !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST1) &&
+                !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST2) &&
+                !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ELENI)
+            ) {
                 return interaction.reply({ content: 'You do not have the required role to use this command.', ephemeral: true });
             }
 
@@ -77,11 +78,11 @@ module.exports = {
             // Determine which inventory to update
             const inventoryToUpdate = inventoryType === 'secondaryInventory' ? receiver.secondaryInventory : receiver.inventory;
 
-            // Add the item to the user's inventory multiple times
+            // Add references to the item in the user's inventory
             for (let i = 0; i < amount; i++) {
-                inventoryToUpdate.push({ id: item.id, name: item.name, emoji: item.emoji, tradable: item.tradable, isIllegal: item.isIllegal, onUse: item.onUse, isUsable: item.isUsable });
+                inventoryToUpdate.push({ itemId: item.id });
             }
-            
+
             // Update the user in the database
             await getDatabase().collection('users').updateOne(
                 { _id: targetUser.id },

@@ -39,10 +39,18 @@ module.exports = {
             // Get the item to store
             const itemName = interaction.options.getString('item');
             const quantity = interaction.options.getInteger('quantity') || 1;
-            
-            // Find the items in the user's inventory, excluding null entries
-            const itemsToMove = user.inventory.filter(item => item && item.name === itemName);
-            
+
+            // Retrieve the item from the items collection using the item name
+            const itemToStore = await getDatabase().collection('items').findOne({ name: itemName });
+
+            // Check if the item is found
+            if (!itemToStore) {
+                return interaction.reply({ content: 'Item not found.', ephemeral: true });
+            }
+
+            // Find the items in the user's inventory with the same itemId, excluding null entries
+            const itemsToMove = user.inventory.filter(item => item && item.itemId === itemToStore.id);
+
             // Check if the user has enough quantity to store
             if (itemsToMove.length < quantity) {
                 return interaction.reply({ content: 'Insufficient quantity to store.', ephemeral: true });
@@ -59,15 +67,13 @@ module.exports = {
                 // Move the specified quantity of items to the secondary inventory
                 for (let i = 0; i < quantity; i++) {
                     // Find the index of the item in the main inventory
-                    const inventoryItemIndex = user.inventory.findIndex(item => item && item.name === itemName);
+                    const inventoryItemIndex = user.inventory.findIndex(item => item && item.itemId === itemToStore.id);
 
                     // Check if the item exists in the main inventory
                     if (inventoryItemIndex !== -1) {
-                        const inventoryItem = user.inventory[inventoryItemIndex];
-                        itemEmoji = inventoryItem.emoji;
-                        
                         // Move the item to the secondary inventory
-                        user.secondaryInventory.push({ name: inventoryItem.name, id: inventoryItem.id, emoji: inventoryItem.emoji });
+                        user.secondaryInventory.push({ itemId: itemToStore.id });
+                        itemEmoji = itemToStore.emoji;
 
                         // Remove the item from the main inventory
                         user.inventory.splice(inventoryItemIndex, 1);

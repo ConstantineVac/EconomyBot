@@ -1,7 +1,7 @@
 const { getDatabase } = require('../database');
 
 module.exports = {
-    name: 'take-item',
+    name: 'admin-take-item',
     description: 'Take an item from a user',
     options: [
         {
@@ -23,9 +23,8 @@ module.exports = {
         {
             name: 'item',
             description: 'Select the item to take',
-            type: 3, // Integer type or 3 if it's a string (item name)
+            type: 3, // String type (item name)
             required: true,
-            // choices: [], // Will be dynamically populated IF we could have more than 25
         },
         {
             name: 'amount',
@@ -37,9 +36,11 @@ module.exports = {
     async execute(interaction) {
         try {
             // Check if the user has the required role (replace ROLE_ID with the actual role ID)
-            if (!interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST) && 
+            if (
+                !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST1) &&
                 !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST2) &&
-                !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ELENI)) {
+                !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ELENI)
+            ) {
                 return interaction.reply({ content: 'You do not have the required role to use this command.', ephemeral: true });
             }
 
@@ -55,6 +56,18 @@ module.exports = {
             // Fetch the specified amount
             const amount = interaction.options.getInteger('amount');
 
+            // Check if the amount is non-negative
+            if (amount <= 0) {
+                return interaction.reply({ content: 'Amount must be a positive integer.', ephemeral: true });
+            }
+
+            // Fetch the item from the items collection
+            const item = await getDatabase().collection('items').findOne({ 'name': itemName });
+
+            if (!item) {
+                return interaction.reply({ content: 'Invalid item name.', ephemeral: true });
+            }
+
             // Fetch the user from the database
             const receiver = await getDatabase().collection('users').findOne({ _id: targetUser.id });
 
@@ -65,25 +78,13 @@ module.exports = {
             // Determine which inventory to update
             const inventoryToUpdate = inventoryType === 'secondaryInventory' ? receiver.secondaryInventory : receiver.inventory;
 
-            // Filter out items with the specified name
-            const itemsToRemove = inventoryToUpdate.filter(userItem => userItem.name === itemName);
+            // Remove references to the item from the user's inventory
+            for (let i = 0; i < amount; i++) {
+                const itemIndex = inventoryToUpdate.findIndex((invItem) => invItem.itemId === item.id);
 
-            if (itemsToRemove.length === 0) {
-                return interaction.reply(`The user does not have ${itemName} in their ${inventoryType}.`);
-            }
-
-            // Calculate the total amount to take (no more than what's available)
-            const totalAmount = Math.min(amount, itemsToRemove.length);
-
-            // Check if the specified amount is greater than the length
-            if (amount > itemsToRemove.length) {
-                return interaction.reply(`The specified amount is greater than the available ${itemName}s in the ${inventoryType}.`);
-            }
-
-            // Remove the specified amount of items from the user's inventory
-            for (let i = 0; i < totalAmount; i++) {
-                const indexToRemove = inventoryToUpdate.indexOf(itemsToRemove[i]);
-                inventoryToUpdate.splice(indexToRemove, 1);
+                if (itemIndex !== -1) {
+                    inventoryToUpdate.splice(itemIndex, 1);
+                }
             }
 
             // Update the user in the database
@@ -92,10 +93,7 @@ module.exports = {
                 { $set: { [inventoryType]: inventoryToUpdate } }
             );
 
-            // Get the emoji of the first item in the array (assuming all items have the same emoji)
-            const itemEmoji = itemsToRemove[0].emoji;
-
-            interaction.reply(`Successfully took ${totalAmount} x ${itemEmoji} ${itemName} from ${targetUser.username}.`);
+            interaction.reply(`Successfully took ${amount} x ${item.emoji} ${item.name} from ${targetUser.username}.`);
         } catch (error) {
             console.error(error);
             interaction.reply({ content: 'An error occurred while processing the take-item command.', ephemeral: true });

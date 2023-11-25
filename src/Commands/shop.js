@@ -1,3 +1,5 @@
+// shop.js
+
 const { ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder, ButtonBuilder } = require('discord.js');
 const { getDatabase } = require('../database');
 
@@ -30,7 +32,7 @@ module.exports = {
                 ephemeral: true,
             });
 
-            // Based on the store selected load the correct shop with all the items
+            // Based on the store selected, load the correct shop with all the items
             const shopSelection = await interaction.channel.awaitMessageComponent({
                 filter: i => i.customId === 'shop_selection' && i.user.id === interaction.user.id,
                 //time: 30000, // 30 seconds timeout
@@ -42,18 +44,25 @@ module.exports = {
 
             const selectedShopName = shopSelection.values[0];
 
-            // Load items from the selected shop's items array to embed
+            // Load item IDs from the selected shop's items array
             const selectedShop = await getDatabase().collection('shop').findOne({ shop_name: selectedShopName });
 
-            // Filter the items where isForSale is true
-            const itemsForSale = selectedShop.items.filter(item => item.isForSale === true)
-            //console.log(itemsForSale)
-
-            if (!selectedShop || !selectedShop.items || itemsForSale.length === 0) {
-                return interaction.followUp({content: `No items found in the shop "${selectedShopName}".`, ephemeral: true});
+            if (!selectedShop || !selectedShop.items || selectedShop.items.length === 0) {
+                return interaction.followUp({ content: `No items found in the shop "${selectedShopName}".`, ephemeral: true });
             }
             
-            
+            // Fetch item details from the 'items' collection based on the stored item IDs
+            const itemDetails = await getItemsDetails(selectedShop.items);
+
+            //console.log(itemDetails)
+
+            // Filter the items where isForSale is true
+            const itemsForSale = itemDetails.filter(item => item.isForSale === true);
+
+            if (itemsForSale.length === 0) {
+                return interaction.followUp({ content: `No items found in the shop "${selectedShopName}".`, ephemeral: true });
+            }
+
             // Calculate the total number of pages
             const totalPages = Math.ceil(itemsForSale.length / ITEMS_PER_PAGE);
 
@@ -80,7 +89,7 @@ module.exports = {
 
                 embed.addFields({
                     name: `${item.emoji} **${item.name}** - 🪙 **${item.price.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}**`,
-                    value: ` Quantity: 1pcs`
+                    value: ` Quantity: 1pcs`,
                 });
 
                 const button = new ButtonBuilder()
@@ -89,7 +98,6 @@ module.exports = {
                     .setStyle(3);
 
                 itemsRow.addComponents(button);
-                //console.log(button)
             }
 
             // Create buttons for navigating between pages
@@ -110,7 +118,7 @@ module.exports = {
 
             // Check if this is a button interaction and update the message
             if (interaction.isButton()) {
-                interaction.update({ embeds: [embed], components: [itemsRow, navigationRow], ephemera: true });
+                interaction.update({ embeds: [embed], components: [itemsRow, navigationRow], ephemeral: true });
             } else {
                 interaction.followUp({ embeds: [embed], components: [itemsRow, navigationRow], ephemeral: true });
             }
@@ -126,4 +134,21 @@ async function getUniqueStoreNames() {
     const shopCollection = getDatabase().collection('shop');
     const uniqueStoreNames = await shopCollection.distinct('shop_name');
     return uniqueStoreNames.filter(Boolean); // Remove any falsy values (null, undefined, etc.)
+}
+
+// Function to fetch item details from the 'items' collection based on item IDs
+async function getItemsDetails(itemIds) {
+    const itemsCollection = getDatabase().collection('items');
+
+    // Extract the 'id' properties from the objects in the array
+    const ids = itemIds.map(item => item.id);
+
+   // console.log('Item IDs:', ids); // Add this line for debugging
+
+    // Query the 'items' collection based on the extracted IDs
+    const itemDetails = await itemsCollection.find({ id: { $in: ids } }).toArray();
+    
+    //console.log('Item Details:', itemDetails); // Add this line for debugging
+
+    return itemDetails;
 }

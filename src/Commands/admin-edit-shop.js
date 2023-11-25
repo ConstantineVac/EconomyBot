@@ -17,6 +17,12 @@ module.exports = {
             required: false,
         },
         {
+            name: 'new_shop_owner',
+            type: 6,
+            description: 'New shop owner',
+            required: false,
+        },
+        {
             name: 'new_description',
             type: 3,
             description: 'New description for the shop',
@@ -32,15 +38,18 @@ module.exports = {
     async execute(interaction) {
         try {
             // Ensure that the command is being used by an admin (customize as needed)
-            if (!interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST1) &&
+            if (
+                !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST1) &&
                 !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST2) &&
-                !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ELENI)) {
+                !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ELENI)
+            ) {
                 return interaction.reply({ content: 'You do not have permission to use this command.', ephemeral: true });
             }
 
             // Extract details from the user's input
             const shopName = interaction.options.getString('shop_name');
             const newShopName = interaction.options.getString('new_shop_name');
+            const newShopOwner = interaction.options.getUser('new_shop_owner');
             const newDescription = interaction.options.getString('new_description');
             const newEmoji = interaction.options.getString('new_emoji');
 
@@ -52,9 +61,21 @@ module.exports = {
                 return interaction.reply({ content: `Shop "${shopName}" not found.`, ephemeral: true });
             }
 
+            // Check if the newShopName already exists in the database
+            if (newShopName) {
+                const shopWithNewName = await getDatabase().collection('shop').findOne({ shop_name: newShopName });
+
+                if (shopWithNewName) {
+                    return interaction.reply({ content: `Shop "${newShopName}" already exists. Please choose a different name.`, ephemeral: true });
+                }
+            }
+
             // Update the shop details if new values are provided
             if (newShopName) {
                 existingShop.shop_name = newShopName;
+            }
+            if (newShopOwner) {
+                existingShop.owner = newShopOwner;
             }
             if (newDescription) {
                 existingShop.description = newDescription;

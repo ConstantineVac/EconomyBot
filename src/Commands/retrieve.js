@@ -40,11 +40,19 @@ module.exports = {
             const itemName = interaction.options.getString('item');
             const quantity = interaction.options.getInteger('quantity') || 1;
 
-            // Find the items in the user's secondary inventory, excluding null entries
-            const itemsToRetrieve = user.secondaryInventory.filter(item => item && item.name === itemName);
+            // Retrieve the item from the items collection using the item name
+            const itemToRetrieve = await getDatabase().collection('items').findOne({ name: itemName });
+
+            // Check if the item is found
+            if (!itemToRetrieve) {
+                return interaction.reply({ content: 'Item not found.', ephemeral: true });
+            }
+
+            // Find the items in the user's secondary inventory with the same itemId, excluding null entries
+            const itemsToMove = user.secondaryInventory.filter(item => item && item.itemId === itemToRetrieve.id);
 
             // Check if the user has enough quantity to retrieve
-            if (itemsToRetrieve.length < quantity) {
+            if (itemsToMove.length < quantity) {
                 return interaction.reply({ content: 'Insufficient quantity to retrieve.', ephemeral: true });
             }
 
@@ -56,18 +64,16 @@ module.exports = {
 
             // Check if the user has enough space in the main inventory
             if (user.inventory.length + quantity <= 200) {
-                // Retrieve the specified quantity of items from the secondary inventory
+                // Move the specified quantity of items to the main inventory
                 for (let i = 0; i < quantity; i++) {
                     // Find the index of the item in the secondary inventory
-                    const secondaryInventoryItemIndex = user.secondaryInventory.findIndex(item => item && item.name === itemName);
+                    const secondaryInventoryItemIndex = user.secondaryInventory.findIndex(item => item && item.itemId === itemToRetrieve.id);
 
                     // Check if the item exists in the secondary inventory
                     if (secondaryInventoryItemIndex !== -1) {
-                        const secondaryInventoryItem = user.secondaryInventory[secondaryInventoryItemIndex];
-                        itemEmoji = secondaryInventoryItem.emoji;
-
                         // Move the item to the main inventory
-                        user.inventory.push({ name: secondaryInventoryItem.name, id: secondaryInventoryItem.id, emoji: secondaryInventoryItem.emoji });
+                        user.inventory.push({ itemId: itemToRetrieve.id });
+                        itemEmoji = itemToRetrieve.emoji;
 
                         // Remove the item from the secondary inventory
                         user.secondaryInventory.splice(secondaryInventoryItemIndex, 1);
@@ -77,7 +83,7 @@ module.exports = {
                     }
                 }
 
-                interaction.reply(`Successfully retrieved ${quantity} x ${itemEmoji} ${itemName} to your main inventory.`);
+                interaction.reply(`Successfully retrieved ${quantity} x ${itemEmoji} ${itemName} from your secondary inventory.`);
             } else {
                 interaction.reply('Your main inventory is full! Please remove some items before retrieving more.');
             }

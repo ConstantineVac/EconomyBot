@@ -1,18 +1,24 @@
-// inv.js
-
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder } = require('discord.js');
 const { getDatabase } = require('../database');
-
 const ITEMS_PER_PAGE = 5;
 
 module.exports = {
     name: 'inv',
     description: 'View your inventory',
+    options: [
+        {
+            name: 'inventory_type',
+            description: 'Select the inventory type',
+            type: 3, // String type
+            required: true,
+            choices: [
+                { name: 'Inventory', value: 'inventory' },
+                { name: 'Chest', value: 'secondaryInventory' },
+            ],
+        },
+    ],    
     async execute(interaction, pageNumber = 1) {
         try {
-            // Initialize itemCounts for each execution
-            const itemCounts = {};
-
             // Retrieve user's inventory from the database
             const user = await getDatabase().collection('users').findOne({ _id: interaction.user.id });
 
@@ -21,23 +27,28 @@ module.exports = {
                 return interaction.reply({ content: 'User not found.', ephemeral: true });
             }
 
-            // Filter out null entries in the inventory
-            const validInventory = user.inventory.filter(item => item !== null && item.name);
+            // Determine which inventory to use based on the selected type
+            const inventoryType = interaction.options.getString('inventory_type');
+            const userInventory = inventoryType === 'secondaryInventory' ? user.secondaryInventory : user.inventory;
 
             // Check if the user has items in the inventory
-            if (!validInventory || validInventory.length === 0) {
-                return interaction.reply('Your inventory is empty.');
+            if (!userInventory || userInventory.length === 0) {
+                return interaction.reply({content: `Your ${inventoryType === 'secondaryInventory' ? 'chest' : 'inventory'} is empty.`, ephemeral: true});
             }
 
-            // Count the occurrences of each item in the inventory
-            validInventory.forEach(inventoryItem => {
-                const itemName = inventoryItem.name;
-                itemCounts[itemName] = (itemCounts[itemName] || 0) + 1;
+            // Retrieve inventory info from the collection info
+            const collectionInfo = await getDatabase().collection('info').findOne({ name: inventoryType });
+
+            // Create a map to count the occurrences of each itemId
+            const itemQuantityMap = new Map();
+            userInventory.forEach((item) => {
+                const itemId = item.itemId;
+                itemQuantityMap.set(itemId, (itemQuantityMap.get(itemId) || 0) + 1 );
             });
 
             // Calculate the total number of pages
-            const totalPages = Math.ceil(Object.keys(itemCounts).length / ITEMS_PER_PAGE);
-            
+            const totalPages = Math.ceil(itemQuantityMap.size / ITEMS_PER_PAGE);
+
             // Retrieve the page number from the interaction (default to 1 if not provided)
             if (interaction.options) {
                 pageNumber = parseInt(interaction.options.getString('page')) || pageNumber;
@@ -45,29 +56,32 @@ module.exports = {
 
             // Calculate the start and end indices for the current page
             const startIndex = (pageNumber - 1) * ITEMS_PER_PAGE;
-            const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, Object.keys(itemCounts).length);
+            const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, itemQuantityMap.size);
+
+            // Customize thumbnail URL based on inventory info
+            const thumbnailURL = collectionInfo?.data?.url || 'https://i.postimg.cc/m2WXXt1j/backpack.png';
 
             // Create an embed to display the user's inventory for the current page
             const embed = new EmbedBuilder()
-                .setTitle('🎒Inventory')
-                .setThumbnail('https://i.postimg.cc/m2WXXt1j/backpack.png')
+                .setTitle(`🎒 ${collectionInfo?.data?.name || inventoryType}`)
+                .setThumbnail(thumbnailURL)
                 .setColor('Green')
-                .setDescription(`Items in your inventory (Page ${pageNumber}/${totalPages})`);
+                .setDescription(`Items in your ${collectionInfo?.data?.name || inventoryType} (Page ${pageNumber}/${totalPages})`);
 
-            // Add each item and its count to the embed
+            // Add each item to the embed
             let itemNumber = (pageNumber - 1) * ITEMS_PER_PAGE + 1;
             for (let i = startIndex; i < endIndex; i++) {
-                const itemName = Object.keys(itemCounts)[i];
-                const itemCount = itemCounts[itemName];
+                const itemId = Array.from(itemQuantityMap.keys())[i];
+                const quantity = itemQuantityMap.get(itemId);
 
-                // Retrieve the item from the inventory to get the emoji
-                const item = validInventory.find(item => item.name === itemName);
+                // Retrieve the item from the items collection using itemId
+                const item = await getDatabase().collection('items').findOne({ id: itemId });
 
-                // Check if itemName, itemCount, and item are defined
-                if (itemName && itemCount !== undefined && item) {
+                // Check if item is defined
+                if (item) {
                     embed.addFields({
-                        name: `${item.emoji} ${itemNumber}. **${itemName}**`,
-                        value: `Quantity: **${itemCount}**`,
+                        name: `${item.emoji} ${itemNumber}. **${item.name}**`,
+                        value: `Quantity: **${quantity}**`,
                     });
                     itemNumber++;
                 }
@@ -75,25 +89,25 @@ module.exports = {
 
             // Create buttons for navigating between pages
             const previousButton = new ButtonBuilder()
-            .setCustomId(`previousPageInv_${Math.max(1, pageNumber - 1)}`)
-            .setLabel('Previous Page')
-            .setStyle(4)
-            .setDisabled(pageNumber === 1); // Disable if this is the first page
+                .setCustomId(`previousPageInv_${Math.max(1, pageNumber - 1)}`)
+                .setLabel('Previous Page')
+                .setStyle(4)
+                .setDisabled(pageNumber === 1); // Disable if this is the first page
 
             const nextButton = new ButtonBuilder()
-            .setCustomId(`nextPageInv_${pageNumber + 1}`)
-            .setLabel('Next Page')
-            .setStyle(3)
-            .setDisabled(pageNumber === totalPages); // Disable if this is the last page
+                .setCustomId(`nextPageInv_${pageNumber + 1}`)
+                .setLabel('Next Page')
+                .setStyle(3)
+                .setDisabled(pageNumber === totalPages); // Disable if this is the last page
 
             // Create an action row for the buttons
             const actionRow = new ActionRowBuilder().addComponents(previousButton, nextButton);
 
             // Check if this is a button interaction and update the message
             if (interaction.isButton()) {
-            interaction.update({ embeds: [embed], components: [actionRow] });
+                interaction.update({ embeds: [embed], components: [actionRow], ephemeral: true });
             } else {
-            interaction.reply({ embeds: [embed], components: [actionRow] });
+                interaction.reply({ embeds: [embed], components: [actionRow], ephemeral:true });
             }
         } catch (error) {
             console.error(error);
