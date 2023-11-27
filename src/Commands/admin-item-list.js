@@ -33,7 +33,9 @@ module.exports = {
             if (interaction.options) {
                 pageNumber = parseInt(interaction.options.getString('page')) || pageNumber;
             }
-    
+            
+            
+
             // Calculate the start and end indices for the current page
             const startIndex = (pageNumber - 1) * ITEMS_PER_PAGE;
             const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, items.length);

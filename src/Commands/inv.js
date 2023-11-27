@@ -28,8 +28,14 @@ module.exports = {
             }
 
             // Determine which inventory to use based on the selected type
-            const inventoryType = interaction.options.getString('inventory_type');
+            let inventoryType;
+            if (interaction.options && interaction.options._hoistedOptions) {
+                const inventoryTypeOption = interaction.options._hoistedOptions.find(option => option.name === 'inventory_type');
+                inventoryType = inventoryTypeOption?.value;
+            }
+
             const userInventory = inventoryType === 'secondaryInventory' ? user.secondaryInventory : user.inventory;
+
 
             // Check if the user has items in the inventory
             if (!userInventory || userInventory.length === 0) {
@@ -49,10 +55,17 @@ module.exports = {
             // Calculate the total number of pages
             const totalPages = Math.ceil(itemQuantityMap.size / ITEMS_PER_PAGE);
 
+            //console.log(`Interaction Options : ${interaction.options}`)
+           // console.log(interaction.options)
+
             // Retrieve the page number from the interaction (default to 1 if not provided)
-            if (interaction.options) {
-                pageNumber = parseInt(interaction.options.getString('page')) || pageNumber;
+            if (interaction.options && interaction.options._hoistedOptions) {
+                const pageOption = interaction.options._hoistedOptions.find(option => option.name === 'page');
+                pageNumber = parseInt(pageOption?.value) || pageNumber;
+                console.log(`Page Number : ${pageNumber}`);
             }
+
+            console.log(interaction.options && interaction.options.page);
 
             // Calculate the start and end indices for the current page
             const startIndex = (pageNumber - 1) * ITEMS_PER_PAGE;

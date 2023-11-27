@@ -1,7 +1,6 @@
 const { EmbedBuilder, ButtonBuilder, ActionRowBuilder, InteractionType } = require('discord.js');
 const { getDatabase } = require('../database');
 
-let username;
 let ITEMS_PER_PAGE = 5;
 
 module.exports = {
@@ -10,250 +9,195 @@ module.exports = {
     options: [
         {
             name: 'target_user',
-            description: 'The user to inspect',
+            description: 'User to inspect',
             type: 6, // USER type
             required: true,
         },
         {
             name: 'inventory_type',
-            description: 'Select the inspection type',
+            description: 'Select one',
             type: 3, // STRING type
             required: true,
             choices: [
-                { name: 'Inventory', value: 'inventory' },
-                { name: 'Secondary Inventory', value: 'secondaryInventory' },
+                { name: 'Primary Inventory', value: 'inventory' },
+                { name: 'Storage', value: 'secondaryInventory' },
                 { name: 'Balance', value: 'balance' },
             ],
         },
     ],
-    async execute(interaction) {
-        // Get the target user and inventory type from the interaction options
-        const targetUser = interaction.options.getUser('target_user');
-        //console.log(targetUser.username);
+    async execute(interaction, pageNumber = 1) {
+        try {
+            // Get the configuration from the database
+            const config = await getDatabase().collection('configuration').findOne({ name: 'admin' });
 
-        //username = targetUser.username;
+            // Get the admin roles from the configuration
+            const adminRoles = config.data.adminRoles;
 
-        const inventoryType = interaction.options.getString('inventory_type');
-        console.log(`type of inventory : ${inventoryType}`)
-        // Check if the user has the required role (replace ROLE_ID with the actual role ID)
-        if (
-            !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST1) &&
-            !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST2) &&
-            !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ELENI)
-        ) {
-            return interaction.reply({ content: 'You do not have the required role to use this command.', ephemeral: true });
-        }
+            // Check if the user has any of the admin roles
+            const hasRole = interaction.member.roles.cache.some(role => adminRoles.includes(role.id));
+            if (!hasRole) {
+                return interaction.reply({ content: 'You do not have the required role to use this command.', ephemeral: true });
+            }
 
-        if (!targetUser || !inventoryType) {
-            return interaction.reply('Please provide a user and select an inventory type.');
-        }
+            let action, targetUser, inventoryType, newPage;
 
-        // Retrieve user data from the database
-        const user = await getDatabase().collection('users').findOne({ _id: targetUser.id });
-    
-        if (!user) {
-            return interaction.reply('User not found.');
-        }
+            // Check if this is a button interaction
+            if (interaction.isButton()) {
+                // Parse the custom ID
+                [action, targetUser, inventoryType, newPage] = interaction.customId.split('_');
+                // Convert the page number to an integer
+                pageNumber = parseInt(newPage);
+            } else {
+                // Get the target user and inventory type from the interaction options
+                targetUser = interaction.options.getUser('target_user').id;
+                inventoryType = interaction.options.getString('inventory_type');
+            }
 
-        // Determine which inspection type to perform
-        let embed;
+            // Retrieve user's inventory from the database
+            const user = await getDatabase().collection('users').findOne({ _id: targetUser });
 
-        if (inventoryType === 'inventory') {
-            embed = await createInventoryEmbed(interaction, targetUser, inventoryType);
-        
-        } else if (inventoryType === 'secondaryInventory') {
-            embed = await createInventoryEmbed(interaction, targetUser, inventoryType);
-        
-        } else if (inventoryType === 'balance') {
-            embed = await createBalanceEmbed(user, targetUser);
-        
-        } else {
-            return interaction.reply('Invalid inspection type.');
+            // Check if the user exists
+            if (!user) {
+                return interaction.reply({ content: 'User not found.', ephemeral: true });
+            }
+
+
+            let userInventory;
+            if (inventoryType === 'inventory' || inventoryType === 'secondaryInventory') {
+                if (inventoryType === 'inventory') {
+                    userInventory = user.inventory;
+                } else {
+                    userInventory = user.secondaryInventory;
+                }
+                
+                //console.log(inventoryType)
+                // Check if the user has items in the inventory
+                if (!userInventory || userInventory.length === 0) {
+                    return interaction.reply({content: `Your ${inventoryType === 'secondaryInventory' ? 'chest' : 'inventory'} is empty.`, ephemeral: true});
+                }
+
+                // Retrieve inventory info from the collection info
+                const collectionInfo = await getDatabase().collection('info').findOne({ name: inventoryType });
+
+                // Create a map to count the occurrences of each itemId
+                const itemQuantityMap = new Map();
+                userInventory.forEach((item) => {
+                    const itemId = item.itemId;
+                    itemQuantityMap.set(itemId, (itemQuantityMap.get(itemId) || 0) + 1 );
+                });
+
+                // Calculate the total number of pages
+                const totalPages = Math.ceil(itemQuantityMap.size / ITEMS_PER_PAGE);
+
+                //console.log(`Interaction Options : ${interaction.options}`)
+                // console.log(interaction.options)
+
+                // Retrieve the page number from the interaction (default to 1 if not provided)
+                if (interaction.options && interaction.options._hoistedOptions) {
+                    const pageOption = interaction.options._hoistedOptions.find(option => option.name === 'page');
+                    pageNumber = parseInt(pageOption?.value) || pageNumber;
+                    console.log(`Page Number : ${pageNumber}`);
+                }
+
+                console.log(interaction.options && interaction.options.page);
+
+                // Calculate the start and end indices for the current page
+                const startIndex = (pageNumber - 1) * ITEMS_PER_PAGE;
+                const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, itemQuantityMap.size);
+
+                // Customize thumbnail URL based on inventory info
+                const thumbnailURL = collectionInfo?.data?.url || 'https://i.postimg.cc/m2WXXt1j/backpack.png';
+
+                // Create an embed to display the user's inventory for the current page
+                const embed = new EmbedBuilder()
+                    .setTitle(`🎒 ${user.username}'s ${collectionInfo?.data?.name || inventoryType}`)
+                    .setThumbnail(thumbnailURL)
+                    .setColor('DarkRed')
+                    .setDescription(`Admin Inspection for user's ${collectionInfo?.data?.name || inventoryType} (Page ${pageNumber}/${totalPages})`);
+
+                // Add each item to the embed
+                let itemNumber = (pageNumber - 1) * ITEMS_PER_PAGE + 1;
+                for (let i = startIndex; i < endIndex; i++) {
+                    const itemId = Array.from(itemQuantityMap.keys())[i];
+                    const quantity = itemQuantityMap.get(itemId);
+
+                    // Retrieve the item from the items collection using itemId
+                    const item = await getDatabase().collection('items').findOne({ id: itemId });
+
+                    // Check if item is defined
+                    if (item) {
+                        embed.addFields({
+                            name: `${item.emoji} ${itemNumber}. **${item.name}**`,
+                            value: `Quantity: **${quantity}**`,
+                        });
+                        itemNumber++;
+                    }
+                }
+
+                // Create buttons for navigating between pages
+                const previousButton = new ButtonBuilder()
+                    .setCustomId(`previousAd_${targetUser}_${inventoryType}_${Math.max(1, pageNumber - 1)}`)
+                    .setLabel('Previous Page')
+                    .setStyle(4)
+                    .setDisabled(pageNumber === 1); // Disable if this is the first page
+
+                const nextButton = new ButtonBuilder()
+                    .setCustomId(`nextAd_${targetUser}_${inventoryType}_${pageNumber + 1}`)
+                    .setLabel('Next Page')
+                    .setStyle(3)
+                    .setDisabled(pageNumber === totalPages); // Disable if this is the last page
+
+                const balanceButton = new ButtonBuilder()
+                    .setCustomId(`showBalance_${targetUser}`)
+                    .setLabel(`Show user's Balance`)
+                    .setStyle(1)
+
+                // Create an action row for the buttons
+                const actionRow = new ActionRowBuilder().addComponents(previousButton, nextButton, balanceButton);
+
+                // Check if this is a button interaction and update the message
+                if (interaction.isButton()) {
+                    interaction.update({ embeds: [embed], components: [actionRow], ephemeral: true });
+                } else {
+                    interaction.reply({ embeds: [embed], components: [actionRow], ephemeral:true });
+                }
+
+            } else {
+                userInventory = { balance: { cash: user.cash, bank: user.bank } };
+                //console.log({content: userInventory})
+                // Load data for each category from the info collection
+                const categories = ['cash', 'bank', 'stash', 'balance', 'currentJob'];
+                const categoryData = {};
+
+                for (const category of categories) {
+                    const categoryInfo = await getDatabase().collection('info').findOne({ name: category });
+                    categoryData[category] = categoryInfo?.data || {};
+                }
+                // Format the money for better readability
+                const formattedCash = user.cash.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+                const formattedBank = user.bank.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+                const formattedStash = user.stash.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+
+                // Create an embed to display the user's balance
+                const embed = new EmbedBuilder()
+                    .setTitle('Admin Account Inspection')
+                    .setDescription(`For User: ${user.username}`)
+                    .setThumbnail(`${categoryData.balance.url}`)
+                    .setColor('Green')
+                    .addFields(
+                        { name: `${categoryData.cash?.emoji} ${categoryData.cash?.name}`, value: formattedCash || '0', inline: true },
+                        { name: `${categoryData.bank?.emoji} ${categoryData.bank?.name}`, value: formattedBank || '0', inline: true },
+                        { name: `${categoryData.stash?.emoji} ${categoryData.stash?.name}`, value: formattedStash || '0', inline: true },
+                        { name: `${categoryData.currentJob?.emoji} ${categoryData.currentJob?.name}`, value: user.currentJob ? user.currentJob.name : 'Unemployed', inline: true },
+                    );
+
+                // Send the embed as a reply
+                interaction.reply({ embeds: [embed], ephemeral: true });
+                }
+
+        } catch (error) {
+            console.error(error);
+            interaction.reply({ content: 'There was an error fetching your inventory.', ephemeral: true });
         }
     },
 };
-
-// Helper function to format inventory items for display
-function formatInventory(inventory) {
-    if (!inventory || inventory.length === 0) {
-        return 'No items';
-    }
-
-    const inventoryMap = new Map();
-
-    // Group items by name and sum quantities
-    inventory.forEach((item) => {
-        const key = `${item.name} - ${item.emoji}`;
-        const quantity = inventoryMap.get(key) || 0;
-        inventoryMap.set(key, quantity + 1);
-    });
-
-    // Format the items for display
-    return Array.from(inventoryMap.entries())
-        .map(([item, quantity]) => `${item} x ${quantity}`)
-        .join('\n');
-}
-
-// Helper function to create an inventory or balance embed
-async function createInventoryEmbed(interaction, targetUser, inventoryType) {
-    try {
-        let pageNumber = 1
-        // Retrieve user's inventory from the database
-        const user = await getDatabase().collection('users').findOne({ _id: targetUser.id });
-        console.log(user)
-
-        // Check if the user exists
-        if (!user) {
-            return interaction.reply({ content: 'User not found.', ephemeral: true });
-        }
-
-        console.log([user, user.inventory, user.secondaryInventory, inventoryType])
-        // Check if the user has items in the inventory
-
-        const userInventory = inventoryType !== 'secondaryInventory' ? user.inventory : user.secondaryInventory;
-        if (!userInventory || userInventory.length === 0) {
-            return interaction.reply({ content: `${user.id}'s ${inventoryType === 'secondaryIinventory' ? 'secondaryInventory' : 'inventory'} is empty.`, ephemeral: true });
-        }
-
-        // Retrieve inventory info from the collection info
-        const collectionInfo = await getDatabase().collection('info').findOne({ name: inventoryType });
-        console.log(collectionInfo)
-        // Create a map to count the occurrences of each itemId
-        const itemQuantityMap = new Map();
-        userInventory.forEach((item) => {
-            const itemId = item.itemId;
-            itemQuantityMap.set(itemId, (itemQuantityMap.get(itemId) || 0) + 1);
-        });
-
-        console.log('Item Quantity Map:', itemQuantityMap);
-
-
-        // Calculate the total number of pages
-        const ITEMS_PER_PAGE = 5; // Adjust as needed
-        const totalPages = Math.ceil(itemQuantityMap.size / ITEMS_PER_PAGE);
-
-        console.log('ITEMS_PER_PAGE:', ITEMS_PER_PAGE);
-        console.log('Item Quantity Map Size:', itemQuantityMap.size);
-        console.log('Total Pages:', totalPages);
-
-
-        // Retrieve the page number from the interaction (default to 1 if not provided)
-        if (interaction.options) {
-            pageNumber = parseInt(interaction.options.getString('page')) || pageNumber;
-        }
-
-        // Calculate the start and end indices for the current page
-        const startIndex = (pageNumber - 1) * ITEMS_PER_PAGE;
-        let endIndex = Math.min(startIndex + ITEMS_PER_PAGE, itemQuantityMap.size);
-
-        // Update the calculation for endIndex
-        if (pageNumber * ITEMS_PER_PAGE > itemQuantityMap.size) {
-            endIndex = itemQuantityMap.size;
-        }
-
-        
-        console.log('Start Index:', startIndex);
-        console.log('End Index:', endIndex);
-
-
-        // Customize thumbnail URL based on inventory info
-        const thumbnailURL = collectionInfo?.data?.url || 'https://i.postimg.cc/m2WXXt1j/backpack.png';
-
-        // Create an embed to display the user's inventory for the current page
-        const embed = new EmbedBuilder()
-            .setTitle(`${user.username}'s ${collectionInfo?.data?.name || inventoryType}`)
-            .setThumbnail(thumbnailURL)
-            .setColor('Green')
-            .setDescription(`Items in your ${collectionInfo?.data?.name || inventoryType} (Page ${pageNumber}/${totalPages})`);
-
-        // Add each item to the embed
-        let itemNumber = (pageNumber - 1) * ITEMS_PER_PAGE + 1;
-        for (let i = startIndex; i < endIndex; i++) {
-            const itemId = Array.from(itemQuantityMap.keys())[i];
-            const quantity = itemQuantityMap.get(itemId);
-
-            // Retrieve the item from the items collection using itemId
-            const item = await getDatabase().collection('items').findOne({ id: itemId });
-
-            // Check if item is defined
-            if (item) {
-                embed.addFields({
-                    name: `${item.emoji} ${itemNumber}. **${item.name}**`,
-                    value: `Quantity: **${quantity}**`,
-                });
-                itemNumber++;
-            }
-        }
-
-        // Create buttons for navigating between pages
-        const previousButton = new ButtonBuilder()
-            .setCustomId(`previousPageInv_${inventoryType}_${pageNumber}`)
-            .setLabel('Previous Page')
-            .setStyle(4)
-            .setDisabled(pageNumber === 1); // Disable if this is the first page
-
-        const nextButton = new ButtonBuilder()
-            .setCustomId(`nextPageInv_${inventoryType}_${pageNumber + 1}`)
-            .setLabel('Next Page')
-            .setStyle(3)
-            .setDisabled(pageNumber === totalPages); // Disable if this is the last page
-
-        // Create an action row for the buttons
-        const actionRow = new ActionRowBuilder().addComponents(previousButton, nextButton);
-
-        // Check if this is a button interaction and update the message
-        if (interaction.isButton()) {
-            await interaction.update({ embeds: [embed], components: [actionRow], ephemeral: true });
-        } else {
-            await interaction.reply({ embeds: [embed], components: [actionRow], ephemeral: true });
-        }
-    } catch (error) {
-        console.error(error);
-        // Check if interaction still exists before replying
-        if (interaction.replied) {
-            console.warn('Interaction has already been acknowledged or replied to.');
-        } else {
-            await interaction.reply({ content: 'There was an error fetching your inventory.', ephemeral: true });
-        }
-    }
-}
-
-
-
-// Helper function to create a balance embed
-async function createBalanceEmbed(user, targetUser) {
-    try {
-        //console.log(`Username-Embed2: ${targetUser.tag}`);
-        const formattedCash = user.cash.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-        const formattedBank = user.bank.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-
-        // Load data for each category from the info collection
-        const categories = ['cash', 'bank', 'stash', 'balance', 'currentJob'];
-        const categoryData = {};
-
-        // Use Promise.all to concurrently fetch data for all categories
-        await Promise.all(categories.map(async (category) => {
-            const categoryInfo = await getDatabase().collection('info').findOne({ name: category });
-            categoryData[category] = categoryInfo?.data || {};
-        }));
-
-        //console.log(categoryData);
-
-        const embed = new EmbedBuilder()
-            .setColor(0x00FF00) // Green color
-            .setTitle(`Balance Inspection - ${targetUser.tag}`)
-            .addFields(
-                { name: `${categoryData.cash?.emoji} ${categoryData.cash?.name}`, value: formattedCash || '0', inline: true },
-                { name: `${categoryData.bank?.emoji} ${categoryData.bank?.name}`, value: formattedBank || '0', inline: true },
-                { name: `${categoryData.stash?.emoji} ${categoryData.stash?.name}`, value: user.stash.toString() || '0', inline: true },
-            )
-            .setTimestamp();
-
-        return embed;
-    } catch (error) {
-        console.error(error);
-        throw new Error('Error fetching category data from the info collection.');
-    }
-}
-
-//console.log(username);
