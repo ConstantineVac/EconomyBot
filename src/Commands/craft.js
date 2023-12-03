@@ -11,12 +11,13 @@ module.exports = {
             description: 'choose a recipe',
             type: 3, // String
             required: true,
-            choices: [] // This will be populated dynamically
+            choices: [], // This will be populated dynamically
+            //autocomplete: true,
         }
     ],
     async execute(interaction) {
         try {
-            // Fetch the recipes from the database
+        // Fetch the recipes from the database
         const recipes = await getDatabase().collection('recipes').find().toArray();
 
         // Map the recipes to the format needed for choices

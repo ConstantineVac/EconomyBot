@@ -29,7 +29,7 @@ module.exports = {
                     username: interaction.user.username,
                     balance: 0.0,
                     cash: 0.0,
-                    stash: 0,
+                    stash: 0.0,
                     inventory: Array.from({ length: 200 }),
                     secondaryInventory: Array.from({ length: 300 }),
                     // Add other fields as needed

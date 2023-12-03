@@ -2,7 +2,7 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const { connect, getDatabase } = require('./database');  // Import the connect function from the database module
-const { Client, GatewayIntentBits, Collection, EmbedBuilder, StringSelectMenuBuilder} = require('discord.js'); 
+const { Client, GatewayIntentBits, Collection, EmbedBuilder, ActionRowBuilder, Events, ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder} = require('discord.js'); 
 
 const client = new Client({
     intents: [
@@ -58,12 +58,6 @@ client.once('ready', async () => {
     // Connect to the database
     await connect();
 
-    // Fetch the recipes from the database
-    const recipes = await getDatabase().collection('recipes').find().toArray();
-    
-    // Map the recipes to the format needed for choices
-    const choicesRecipes = recipes.map(recipe => ({ name: recipe.name, value: recipe.name }));
-    
     // Construct the path to the Commands directory
     const commandsDirectory = path.join(__dirname, 'Commands');
 
@@ -73,10 +67,6 @@ client.once('ready', async () => {
 
     for (const file of commandFiles) {
         const command = require(path.join(commandsDirectory, file));
-        // If this is the 'craft' command, modify its options
-        if (command.name === 'craft') {
-            command.options[0].choices = choicesRecipes;
-        }
         client.commands.set(command.name, command);
     }
     
@@ -96,6 +86,7 @@ client.once('ready', async () => {
 
 
 
+
 client.on('interactionCreate', async interaction => {
     if (interaction.isCommand()) {
         const command = client.commands.get(interaction.commandName);
@@ -111,10 +102,18 @@ client.on('interactionCreate', async interaction => {
     } else if (interaction.isButton()) {
         // Dynamically import the button click event handler
         const handleButtonClick = require('./eventHandlers/buttonClick');
-        handleButtonClick(interaction);
+        handleButtonClick(interaction);  
+    } else {
+        const command = client.commands.get(interaction.commandName);
+        if (!command || !command.autocomplete) return;
+        try {
+            await command.autocomplete(interaction);
+        } catch (error) {
+            console.error(error);
+            await interaction.respond({ content: 'An error occurred while fetching autocomplete choices.', ephemeral: true });
+        }
     }
 });
-
 
 
 client.login(process.env.TOKEN);

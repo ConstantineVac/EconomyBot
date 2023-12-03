@@ -33,11 +33,17 @@ module.exports = {
     ],
     // The function to execute when the command is called
     async execute(interaction) {
-        // Check if the user has the required role (replace ROLE_ID with the actual role ID)
-        if (!interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST1) && 
-            !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ELENI) && 
-            !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST2)) {
-                return interaction.reply({ content: 'You do not have the required role to use this command.', ephemeral: true });
+        // Get the configuration from the database
+        const config = await getDatabase().collection('configuration').findOne({ name: 'admin' });
+
+        // Get the admin roles from the configuration
+        const adminRoles = config.data.adminRoles;
+        
+        // Check if the user has any of the admin roles
+        const hasRole = interaction.member.roles.cache.some(role => adminRoles.includes(role.id));
+        
+        if (!hasRole) {
+            return interaction.reply({ content: 'You do not have the required role to use this command.', ephemeral: true });
         }
 
         // Get the ID of the target user

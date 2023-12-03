@@ -9,6 +9,8 @@ module.exports = {
             type: 3, // String type
             description: 'Name of the shop to edit',
             required: true,
+            choices: [],
+            autocomplete: true,
         },
         {
             name: 'new_shop_name',
@@ -35,15 +37,36 @@ module.exports = {
             required: false,
         },
     ],
+    autocomplete: async function (interaction) {
+        try {
+            // Get the user's input
+            const userInput = interaction.options.getString('shop_name');
+
+            // Fetch the items from the database that match the user's input
+            const shops = await getDatabase().collection('shop').find({ shop_name: { $regex: userInput, $options: 'i' } }).toArray();
+            //console.log(shops)
+            // Map the items to the format needed for choices
+            const choicesShops = shops.map(shop => ({ name: shop.shop_name, value: shop.shop_name }));
+
+            // Respond with the choices
+            await interaction.respond(choicesShops.slice(0, 25));
+        } catch (error) {
+            console.error(error);
+            await interaction.respond({ content: 'An error occurred while fetching shop choices.', ephemeral: true });
+        }
+    },
     async execute(interaction) {
         try {
-            // Ensure that the command is being used by an admin (customize as needed)
-            if (
-                !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST1) &&
-                !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST2) &&
-                !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ELENI)
-            ) {
-                return interaction.reply({ content: 'You do not have permission to use this command.', ephemeral: true });
+            // Get the configuration from the database
+            const config = await getDatabase().collection('configuration').findOne({ name: 'admin' });
+
+            // Get the admin roles from the configuration
+            const adminRoles = config.data.adminRoles;
+
+            // Check if the user has any of the admin roles
+            const hasRole = interaction.member.roles.cache.some(role => adminRoles.includes(role.id));
+            if (!hasRole) {
+                return interaction.reply({ content: 'You do not have the required role to use this command.', ephemeral: true });
             }
 
             // Extract details from the user's input

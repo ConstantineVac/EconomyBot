@@ -9,6 +9,8 @@ module.exports = {
             type: 3,
             description: 'Name of the shop to manage',
             required: true,
+            choices: [],
+            autocomplete: true,
         },
         {
             name: 'action',
@@ -31,15 +33,50 @@ module.exports = {
             type: 3,
             description: 'Name of the item to add or remove',
             required: true,
+            choices: [],
+            autocomplete: true,
         },
     ],
+    async autocomplete(interaction) {
+        try {
+            if (!interaction.isAutocomplete()) return;
+    
+            const focusedOption = interaction.options.getFocused(true);
+            let choices;
+    
+            if (focusedOption.name === 'shop_name') {
+                // Your logic for handling shop_name autocomplete
+                const userInput = focusedOption.value;
+                const shops = await getDatabase().collection('shop').find({ shop_name: { $regex: userInput, $options: 'i' } }).toArray();
+                choices = shops.map(shop => ({ name: shop.shop_name, value: shop.shop_name }));
+            }
+    
+            if (focusedOption.name === 'item_name') {
+                // Your logic for handling item_name autocomplete
+                const userInput = focusedOption.value;
+                const items = await getDatabase().collection('items').find({ name: { $regex: userInput, $options: 'i' } }).toArray();
+                choices = items.map(item => ({ name: item.name, value: item.name }));
+            }
+    
+            const filtered = choices.filter(choice => choice.name.startsWith(focusedOption.value));
+            await interaction.respond( filtered.slice(0, 25));
+        } catch (error) {
+            console.error(error);
+            await interaction.reply({ content: 'An error occurred while fetching choices.', ephemeral: true });
+        }
+    },
     async execute(interaction) {
         try {
-            // Ensure that the command is being used by an admin (customize as needed)
-            if (!interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST1) &&
-                !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_TEST2) &&
-                !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ELENI)) {
-                return interaction.reply({ content: 'You do not have permission to use this command.', ephemeral: true });
+            // Get the configuration from the database
+            const config = await getDatabase().collection('configuration').findOne({ name: 'admin' });
+
+            // Get the admin roles from the configuration
+            const adminRoles = config.data.adminRoles;
+
+            // Check if the user has any of the admin roles
+            const hasRole = interaction.member.roles.cache.some(role => adminRoles.includes(role.id));
+            if (!hasRole) {
+                return interaction.reply({ content: 'You do not have the required role to use this command.', ephemeral: true });
             }
 
             // Extract details from the user's input
