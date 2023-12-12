@@ -34,6 +34,7 @@ module.exports = {
             // Check if the user has any of the admin roles
             const isOwner = owners.includes(interaction.user.id);
             const isServerOwner = interaction.guild && interaction.guild.ownerId === interaction.user.id;
+            console.log([isOwner, isServerOwner])
             //console.log(isServerOwner)
             if (!isOwner && !isServerOwner) {
                 return interaction.reply({ content: 'You do not have owner permission to use this command.', ephemeral: true });

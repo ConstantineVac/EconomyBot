@@ -1,8 +1,12 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
+const { REST } = require('@discordjs/rest');
+const { Routes } = require('discord-api-types/v9');
 const { connect, getDatabase } = require('./database');  // Import the connect function from the database module
 const { Client, GatewayIntentBits, Collection, EmbedBuilder, ActionRowBuilder, Events, ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder} = require('discord.js'); 
+const rest = new REST({ version: '9' }).setToken(process.env.TOKEN);
+const clientId = process.env.CLIENT_ID;
 
 const client = new Client({
     intents: [
@@ -12,6 +16,8 @@ const client = new Client({
         GatewayIntentBits.MessageContent,
     ],
 });
+
+let commands = [];
 
 // client.once('ready', async () => {
 //     console.log('✅ Bot is online!');
@@ -52,6 +58,7 @@ const client = new Client({
 //     console.log('✅ All commands have been registered globally!');
 // });
 
+
 client.once('ready', async () => {
     console.log('✅ Bot is online!');
     
@@ -83,6 +90,33 @@ client.once('ready', async () => {
 
     console.log('✅ All commands have been registered for each joined guild!');
 });
+
+// register commands to new server.
+client.on('guildCreate', async (guild) => {
+    console.log(`Joined a new guild: ${guild.id}`);
+    
+    // Re-read the command files
+    const commandFiles = fs.readdirSync(path.join(__dirname, 'Commands')).filter(file => file.endsWith('.js'));
+
+    // Re-construct the commands
+    const commands = commandFiles.map(file => {
+        const command = require(path.join(__dirname, 'Commands', file));
+        return {
+            name: command.name,
+            description: command.description,
+            options: command.options, // Assuming 'options' is a property in your command file
+        };
+    });
+
+    // Register the commands in the new guild
+    try {
+        await guild.commands.set(commands);
+        console.log('Commands registered in the new guild.');
+    } catch (error) {
+        console.error(`Error registering commands in the new guild: ${error.message}`);
+    }
+});
+
 
 
 
